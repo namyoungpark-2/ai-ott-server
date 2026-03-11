@@ -1,0 +1,38 @@
+erDiagram
+  SERIES ||--o{ SEASON : has
+  SERIES ||--o{ CONTENT : owns
+  SEASON ||--o{ CONTENT : contains
+  CONTENT ||--o{ CONTENT : derives
+
+  SERIES {
+    uuid id PK
+    string status
+    string default_language
+    datetime created_at
+    datetime updated_at
+  }
+
+  SEASON {
+    uuid id PK
+    uuid series_id FK
+    int season_number
+    string status
+    datetime created_at
+    datetime updated_at
+  }
+
+  CONTENT {
+    uuid id PK
+    string content_type
+    string status
+    uuid series_id FK "nullable"
+    uuid season_id FK "nullable"
+    int episode_number "nullable"
+    int runtime_seconds "nullable"
+    datetime release_at "nullable"
+    string default_language
+    uuid source_content_id FK "nullable"
+    string source_relation "nullable"
+    datetime created_at
+    datetime updated_at
+  }
