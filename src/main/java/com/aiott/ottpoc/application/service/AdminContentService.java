@@ -7,8 +7,8 @@ import com.aiott.ottpoc.application.port.in.AdminContentUseCase;
 import com.aiott.ottpoc.application.port.in.TranscodeVideoAssetUseCase;
 import com.aiott.ottpoc.application.port.out.AssetStoragePort;
 import com.aiott.ottpoc.application.port.out.CatalogCommandPort;
+import com.aiott.ottpoc.application.port.out.MediaStoragePort;
 import com.aiott.ottpoc.application.port.out.VideoAssetCommandPort;
-import com.aiott.ottpoc.domain.model.StorageType;
 import com.aiott.ottpoc.domain.model.VideoAssetStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +23,7 @@ public class AdminContentService implements AdminContentUseCase {
 
     private final CatalogCommandPort catalogCommandPort;
     private final AssetStoragePort storagePort;
+    private final MediaStoragePort mediaStoragePort;
     private final VideoAssetCommandPort videoAssetCommandPort;
     private final TranscodeVideoAssetUseCase transcodeVideoAssetUseCase;
 
@@ -62,12 +63,13 @@ public class AdminContentService implements AdminContentUseCase {
     @Transactional
     public AdminAttachAssetResult attachAsset(UUID contentId, MultipartFile file) {
         try {
-            var sourcePath = storagePort.saveSourceVideo(file.getBytes(), file.getOriginalFilename());
+            var tempPath = storagePort.saveSourceVideo(file.getBytes(), file.getOriginalFilename());
+            var sourceKey = mediaStoragePort.storeSource(tempPath, contentId, file.getOriginalFilename());
 
             var videoAssetId = videoAssetCommandPort.createVideoAsset(
                     contentId,
-                    StorageType.LOCAL,
-                    sourcePath.toString(),
+                    mediaStoragePort.storageType(),
+                    sourceKey,
                     VideoAssetStatus.UPLOADED
             );
 

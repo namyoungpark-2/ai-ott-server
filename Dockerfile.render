@@ -17,7 +17,7 @@ RUN apt-get update \
 
 COPY --from=builder /app/build/libs/*.jar /app/app.jar
 
-RUN mkdir -p /app/videos/original /app/videos/hls /app/videos/thumbnails /app/data/uploads /app/data/hls
+RUN mkdir -p /app/data/uploads /app/data/hls /app/data/thumbnails /app/data/tmp
 
 ENV PORT=10000
 EXPOSE 10000

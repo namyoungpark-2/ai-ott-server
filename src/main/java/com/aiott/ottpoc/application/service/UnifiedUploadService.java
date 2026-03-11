@@ -4,18 +4,16 @@ import com.aiott.ottpoc.application.port.in.UnifiedUploadUseCase;
 import com.aiott.ottpoc.application.port.in.TranscodeVideoAssetUseCase;
 import com.aiott.ottpoc.application.port.out.CatalogCommandPort;
 import com.aiott.ottpoc.application.port.out.AssetStoragePort;
+import com.aiott.ottpoc.application.port.out.MediaStoragePort;
 import com.aiott.ottpoc.application.port.out.VideoAssetCommandPort;
-import com.aiott.ottpoc.application.port.out.TranscodingPort;
 import com.aiott.ottpoc.application.dto.UnifiedUploadResult;
 import com.aiott.ottpoc.application.dto.UnifiedUploadCommand;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.scheduling.annotation.Async;
 
 import java.util.UUID;
 import com.aiott.ottpoc.domain.model.VideoAssetStatus;
-import com.aiott.ottpoc.domain.model.StorageType;
 
 @Service
 @RequiredArgsConstructor
@@ -23,18 +21,16 @@ public class UnifiedUploadService implements UnifiedUploadUseCase {
 
     private final CatalogCommandPort catalogCommandPort;
     private final AssetStoragePort storagePort;
+    private final MediaStoragePort mediaStoragePort;
     private final VideoAssetCommandPort videoAssetCommandPort;
-    private final TranscodingPort transcodingPort;
-    private final TranscodeVideoAssetUseCase transcodeVideoAssetUseCase; 
+    private final TranscodeVideoAssetUseCase transcodeVideoAssetUseCase;
 
     @Override
     public UnifiedUploadResult upload(MultipartFile file, UnifiedUploadCommand cmd) {
         try {
             UUID contentId = cmd.contentId();
 
-            // ✅ B 플로우: 기존 Content에 asset만 붙이기
             if (contentId == null) {
-                // ✅ A 플로우: Content + Asset 같이 생성
                 String mode = (cmd.mode() == null ? "MOVIE" : cmd.mode().toUpperCase());
                 String title = (cmd.title() == null || cmd.title().isBlank()) ? "Untitled" : cmd.title();
                 String defaultLang = "en";
@@ -61,20 +57,24 @@ public class UnifiedUploadService implements UnifiedUploadUseCase {
                 }
             }
 
-            // 이후 로직은 동일 (원본 저장 -> video_asset 생성 -> transcode)
-            var sourcePath = storagePort.saveSourceVideo(file.getBytes(), file.getOriginalFilename());
+            // 1. Save to local temp
+            var tempPath = storagePort.saveSourceVideo(file.getBytes(), file.getOriginalFilename());
 
+            // 2. Store to permanent storage (local: no-op, R2: upload + delete temp)
+            var sourceKey = mediaStoragePort.storeSource(tempPath, contentId, file.getOriginalFilename());
+
+            // 3. Create VideoAsset record with the correct storage type
             var videoAssetId = videoAssetCommandPort.createVideoAsset(
                     contentId,
-                    StorageType.LOCAL,
-                    sourcePath.toString(),
+                    mediaStoragePort.storageType(),
+                    sourceKey,
                     VideoAssetStatus.UPLOADED
             );
 
+            // 4. Trigger async transcoding
             transcodeVideoAssetUseCase.transcode(videoAssetId, null);
 
             return new UnifiedUploadResult(contentId, "PROCESSING");
-
 
         } catch (Exception e) {
             throw new RuntimeException("Unified upload failed", e);
