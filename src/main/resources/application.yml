@@ -57,3 +57,6 @@ management:
 security:
   jwt:
     secret: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
+
+server:
+  port: ${PORT:8080}
