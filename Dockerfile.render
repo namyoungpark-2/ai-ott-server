@@ -1,0 +1,25 @@
+FROM gradle:8.14.3-jdk24 AS builder
+WORKDIR /app
+
+COPY build.gradle settings.gradle gradlew gradlew.bat ./
+COPY gradle ./gradle
+RUN chmod +x gradlew
+
+COPY src ./src
+RUN ./gradlew bootJar --no-daemon -x test
+
+FROM eclipse-temurin:24-jre
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/build/libs/*.jar /app/app.jar
+
+RUN mkdir -p /app/videos/original /app/videos/hls /app/videos/thumbnails /app/data/uploads /app/data/hls
+
+ENV PORT=10000
+EXPOSE 10000
+
+ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT} -jar /app/app.jar"]
