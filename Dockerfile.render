@@ -22,4 +22,8 @@ RUN mkdir -p /app/data/uploads /app/data/hls /app/data/thumbnails /app/data/tmp
 ENV PORT=10000
 EXPOSE 10000
 
-ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT} -jar /app/app.jar"]
+ENTRYPOINT ["sh", "-c", "\
+  if [ -z \"$DB_URL\" ] && [ -n \"$DATABASE_URL\" ]; then \
+    export DB_URL=$(echo \"$DATABASE_URL\" | sed 's|^postgresql://|jdbc:postgresql://|'); \
+  fi && \
+  java -Dserver.port=${PORT} -jar /app/app.jar"]
