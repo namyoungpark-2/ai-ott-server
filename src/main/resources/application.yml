@@ -27,6 +27,9 @@ spring:
     validate-on-migrate: true
 
 
+  main:
+    lazy-initialization: true
+
   servlet:
     multipart:
       max-file-size: 1024MB
@@ -57,7 +60,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: flyway,mappings
+        include: health,flyway,mappings
+  endpoint:
+    health:
+      show-details: never
 
 security:
   jwt:

@@ -103,10 +103,10 @@ public class SecurityConfig {
     SecurityFilterChain defaultChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // .requestMatchers("/health").permitAll()
               .requestMatchers(
                   "/auth/**",
                   "/health",
+                  "/actuator/health",
                   "/api/admin/**",
                   "/hls/**",
                   "/thumbnails/**"

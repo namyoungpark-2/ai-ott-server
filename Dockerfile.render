@@ -20,6 +20,7 @@ COPY --from=builder /app/build/libs/*.jar /app/app.jar
 RUN mkdir -p /app/data/uploads /app/data/hls /app/data/thumbnails /app/data/tmp
 
 ENV PORT=10000
+ENV JAVA_OPTS="-XX:TieredStopAtLevel=1 -Xms128m -Xmx400m -XX:MaxMetaspaceSize=128m"
 EXPOSE 10000
 
-ENTRYPOINT ["sh", "-c", "exec java -Dserver.port=${PORT} -jar /app/app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java ${JAVA_OPTS} -Dserver.port=${PORT} -jar /app/app.jar"]
