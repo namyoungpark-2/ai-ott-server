@@ -42,6 +42,8 @@ logging:
     org.flywaydb.core.internal.command: debug
 
 app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   storage:
     type: ${STORAGE_TYPE:local}      # local | r2
     upload-dir: ${UPLOAD_DIR:./data/uploads}
