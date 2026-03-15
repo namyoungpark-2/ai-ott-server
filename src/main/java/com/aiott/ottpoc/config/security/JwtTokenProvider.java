@@ -36,6 +36,11 @@ public class JwtTokenProvider {
         ), List.of("ROLE_SRE"));
     }
 
+    public String issueUserToken(String subject, String role) {
+        List<String> roles = "ADMIN".equalsIgnoreCase(role) ? List.of("ROLE_ADMIN") : List.of("ROLE_USER");
+        return issueToken(subject, "app", List.of(), roles);
+    }
+
     private String issueToken(String sub, String aud, List<String> scopes, List<String> roles) {
         long now = Instant.now().getEpochSecond();
         long exp = now + 60 * 30; // 30분
