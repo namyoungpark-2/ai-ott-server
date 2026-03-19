@@ -8,10 +8,13 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Duration;
 import java.util.UUID;
 
 /**
@@ -24,13 +27,17 @@ import java.util.UUID;
 @Slf4j
 public class R2MediaStorageAdapter implements MediaStoragePort {
 
+    private static final Duration PLAYBACK_URL_TTL = Duration.ofHours(4);
+
     private final S3Client s3;
+    private final S3Presigner presigner;
     private final String bucket;
     private final String publicUrl;
     private final Path tempDir;
 
-    public R2MediaStorageAdapter(S3Client s3, R2Properties props, String tempDir) {
+    public R2MediaStorageAdapter(S3Client s3, S3Presigner presigner, R2Properties props, String tempDir) {
         this.s3 = s3;
+        this.presigner = presigner;
         this.bucket = props.getBucket();
         this.publicUrl = props.getPublicUrl().replaceAll("/$", "");
         this.tempDir = Paths.get(tempDir).toAbsolutePath().normalize();
@@ -142,6 +149,45 @@ public class R2MediaStorageAdapter implements MediaStoragePort {
             } catch (IOException e) {
                 log.warn("[R2] Failed to delete temp path: {}", path, e);
             }
+        }
+    }
+
+    /**
+     * R2 객체에 대한 시간제한 presigned URL을 생성합니다 (기본 4시간).
+     * <p>
+     * hlsMasterKey가 전체 공개 URL 형식이면 키를 추출하고,
+     * 이미 상대 키 형식이면 그대로 사용합니다.
+     * <p>
+     * ⚠️ 주의: presigned URL은 master.m3u8만 보호합니다.
+     * .ts 세그먼트 파일은 여전히 상대 경로로 접근됩니다.
+     * Phase 2에서 Cloudflare Signed Token으로 업그레이드 필요.
+     */
+    @Override
+    public String getPlaybackUrl(String hlsMasterKey) {
+        if (hlsMasterKey == null) return null;
+
+        // 공개 URL에서 S3 키 추출
+        String key;
+        if (hlsMasterKey.startsWith(publicUrl)) {
+            key = hlsMasterKey.substring(publicUrl.length()).replaceFirst("^/", "");
+        } else if (hlsMasterKey.startsWith("hls/")) {
+            key = hlsMasterKey;
+        } else {
+            // 알 수 없는 형식은 그대로 반환
+            log.warn("[R2] Cannot generate presigned URL for: {}", hlsMasterKey);
+            return hlsMasterKey;
+        }
+
+        try {
+            PresignedGetObjectRequest presigned = presigner.presignGetObject(r -> r
+                    .signatureDuration(PLAYBACK_URL_TTL)
+                    .getObjectRequest(g -> g.bucket(bucket).key(key)));
+            String url = presigned.url().toString();
+            log.debug("[R2] Generated presigned URL for key={}, expires in {}h", key, PLAYBACK_URL_TTL.toHours());
+            return url;
+        } catch (Exception e) {
+            log.error("[R2] Failed to generate presigned URL for key={}: {}", key, e.getMessage());
+            return hlsMasterKey; // 실패 시 원본 URL 반환
         }
     }
 

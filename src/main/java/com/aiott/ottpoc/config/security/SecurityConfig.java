@@ -1,5 +1,6 @@
 package com.aiott.ottpoc.config.security;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -8,24 +9,30 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.aiott.ottpoc.config.StripeProperties;
 
 @Configuration
 @EnableMethodSecurity
+@EnableConfigurationProperties(StripeProperties.class)
 public class SecurityConfig {
 
     private final JwtDecoder jwtDecoder;
+    private final RateLimitingFilter rateLimitingFilter;
 
-    public SecurityConfig(JwtDecoder jwtDecoder) {
+    public SecurityConfig(JwtDecoder jwtDecoder, RateLimitingFilter rateLimitingFilter) {
         this.jwtDecoder = jwtDecoder;
+        this.rateLimitingFilter = rateLimitingFilter;
     }
 
     @Bean
     @Order(0)
     SecurityFilterChain authChain(HttpSecurity http) throws Exception {
-      http.securityMatcher("/auth/**")
-        .csrf(csrf -> csrf.disable())
-        .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
-      return http.build();
+        http.securityMatcher("/auth/**")
+            .csrf(csrf -> csrf.disable())
+            .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        return http.build();
     }
 
     @Bean
@@ -84,8 +91,11 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/app/playback/**").authenticated()   // 재생은 로그인 필수
+                .requestMatchers("/api/app/me/**").authenticated()          // 개인화 기능
+                .requestMatchers("/api/app/payments/**").authenticated()    // 결제
                 .requestMatchers("/api/app/analytics/**").authenticated()
-                .anyRequest().permitAll()   // ✅ 핵심: app은 기본 공개
+                .anyRequest().permitAll()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt
@@ -97,7 +107,16 @@ public class SecurityConfig {
     }
 
 
-    // /auth/** 같은 게 생기면 여기에 permitAll로 열어두면 됨
+    // Stripe 웹훅 - 인증 불필요 (서명으로 검증)
+    @Bean
+    @Order(5)
+    SecurityFilterChain webhookChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/api/webhooks/**")
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        return http.build();
+    }
+
     @Bean
     @Order(99)
     SecurityFilterChain defaultChain(HttpSecurity http) throws Exception {

@@ -30,14 +30,85 @@ public class UserAuthPersistenceAdapter implements UserAuthPort {
         entity.setUsername(username);
         entity.setPasswordHash(passwordHash);
         entity.setRole(role);
+        entity.setSubscriptionTier("FREE");
+        entity.setEmailVerified(false);
         entity.setCreatedAt(OffsetDateTime.now());
         UserJpaEntity saved = repo.save(entity);
-        return new UserRecord(saved.getId(), saved.getUsername(), saved.getPasswordHash(), saved.getRole());
+        return toRecord(saved);
     }
 
     @Override
     public Optional<UserRecord> findByUsername(String username) {
-        return repo.findByUsername(username)
-                .map(e -> new UserRecord(e.getId(), e.getUsername(), e.getPasswordHash(), e.getRole()));
+        return repo.findByUsername(username).map(this::toRecord);
+    }
+
+    @Override
+    public void saveEmailVerificationToken(UUID userId, String token, OffsetDateTime expiresAt) {
+        repo.findById(userId).ifPresent(u -> {
+            u.setEmailVerificationToken(token);
+            u.setEmailVerificationExpiresAt(expiresAt);
+            repo.save(u);
+        });
+    }
+
+    @Override
+    public Optional<UserRecord> findByEmailVerificationToken(String token) {
+        return repo.findByEmailVerificationToken(token).map(this::toRecord);
+    }
+
+    @Override
+    public void markEmailVerified(UUID userId) {
+        repo.findById(userId).ifPresent(u -> {
+            u.setEmailVerified(true);
+            u.setEmailVerificationToken(null);
+            u.setEmailVerificationExpiresAt(null);
+            repo.save(u);
+        });
+    }
+
+    @Override
+    public void savePasswordResetToken(UUID userId, String token, OffsetDateTime expiresAt) {
+        repo.findById(userId).ifPresent(u -> {
+            u.setPasswordResetToken(token);
+            u.setPasswordResetExpiresAt(expiresAt);
+            repo.save(u);
+        });
+    }
+
+    @Override
+    public Optional<UserRecord> findByPasswordResetToken(String token) {
+        return repo.findByPasswordResetToken(token).map(this::toRecord);
+    }
+
+    @Override
+    public void updatePassword(UUID userId, String newPasswordHash) {
+        repo.findById(userId).ifPresent(u -> {
+            u.setPasswordHash(newPasswordHash);
+            repo.save(u);
+        });
+    }
+
+    @Override
+    public void clearPasswordResetToken(UUID userId) {
+        repo.findById(userId).ifPresent(u -> {
+            u.setPasswordResetToken(null);
+            u.setPasswordResetExpiresAt(null);
+            repo.save(u);
+        });
+    }
+
+    private UserRecord toRecord(UserJpaEntity e) {
+        return new UserRecord(
+                e.getId(),
+                e.getUsername(),
+                e.getPasswordHash(),
+                e.getRole(),
+                e.getSubscriptionTier() != null ? e.getSubscriptionTier() : "FREE",
+                e.isEmailVerified(),
+                e.getEmailVerificationToken(),
+                e.getEmailVerificationExpiresAt(),
+                e.getPasswordResetToken(),
+                e.getPasswordResetExpiresAt()
+        );
     }
 }

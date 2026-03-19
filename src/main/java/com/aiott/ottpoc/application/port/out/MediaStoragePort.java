@@ -45,4 +45,18 @@ public interface MediaStoragePort {
      * No-op in local mode (files ARE the permanent copy).
      */
     void cleanupTemp(Path... paths);
+
+    /**
+     * 재생 URL 반환.
+     * <p>
+     * Local: 저장된 경로/URL을 그대로 반환.<br>
+     * R2: time-limited presigned URL 생성 (기본 4시간 유효).
+     * <p>
+     * 주의: HLS의 경우 master.m3u8 presigned URL만으로는 .ts 세그먼트까지
+     * 완전히 보호되지 않습니다. Phase 2에서 Cloudflare Signed Token 또는
+     * 서버 사이드 m3u8 재작성으로 업그레이드 필요.
+     */
+    default String getPlaybackUrl(String hlsMasterKey) {
+        return hlsMasterKey;
+    }
 }

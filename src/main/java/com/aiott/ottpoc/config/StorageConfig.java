@@ -13,6 +13,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.net.URI;
 
@@ -46,10 +47,25 @@ public class StorageConfig {
 
     @Bean
     @ConditionalOnProperty(name = "app.storage.type", havingValue = "r2")
+    public S3Presigner r2S3Presigner(R2Properties props) {
+        return S3Presigner.builder()
+                .endpointOverride(URI.create(
+                        "https://" + props.getAccountId() + ".r2.cloudflarestorage.com"))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(props.getAccessKeyId(), props.getSecretAccessKey())))
+                .region(Region.of("auto"))
+                .serviceConfiguration(
+                        S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                .build();
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "app.storage.type", havingValue = "r2")
     public MediaStoragePort r2MediaStorageAdapter(
             S3Client r2S3Client,
+            S3Presigner r2S3Presigner,
             R2Properties props,
             @Value("${app.storage.temp-dir:./data/tmp}") String tempDir) {
-        return new R2MediaStorageAdapter(r2S3Client, props, tempDir);
+        return new R2MediaStorageAdapter(r2S3Client, r2S3Presigner, props, tempDir);
     }
 }

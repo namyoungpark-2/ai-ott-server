@@ -57,6 +57,27 @@ app:
     public-url: ${R2_PUBLIC_URL:}    # e.g. https://pub-xxxxxxxx.r2.dev
   ffmpeg:
     path: ${FFMPEG_PATH:ffmpeg}
+  web:
+    base-url: ${WEB_BASE_URL:http://localhost:3000}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:noreply@ai-ott.com}
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+    basic-price-id: ${STRIPE_BASIC_PRICE_ID:price_basic_placeholder}
+    premium-price-id: ${STRIPE_PREMIUM_PRICE_ID:price_premium_placeholder}
+
+# SendGrid SMTP 릴레이 설정 예시 (MAIL_ENABLED=true 시 활성화)
+# spring:
+#   mail:
+#     host: ${SMTP_HOST:smtp.sendgrid.net}
+#     port: ${SMTP_PORT:587}
+#     username: ${SMTP_USERNAME:apikey}
+#     password: ${SMTP_PASSWORD:}
+#     properties:
+#       mail.smtp.auth: true
+#       mail.smtp.starttls.enable: true
 
 management:
   endpoints:
@@ -69,7 +90,8 @@ management:
 
 security:
   jwt:
-    secret: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
+    # 운영환경: openssl rand -base64 48 로 생성 후 JWT_SECRET 환경변수로 주입
+    secret: ${JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32CHARS_MIN}
 
 server:
   port: ${PORT:8080}

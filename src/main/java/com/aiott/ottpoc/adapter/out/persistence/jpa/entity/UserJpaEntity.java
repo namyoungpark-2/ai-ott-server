@@ -24,6 +24,30 @@ public class UserJpaEntity {
     @Column(nullable = false, length = 20)
     private String role;
 
+    @Column(name = "subscription_tier", nullable = false, length = 20)
+    private String subscriptionTier = "FREE";
+
+    // ── 이메일 인증 ──────────────────────────────────────────────────────────
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(name = "email_verification_token", length = 64)
+    private String emailVerificationToken;
+
+    @Column(name = "email_verification_expires_at")
+    private OffsetDateTime emailVerificationExpiresAt;
+
+    // ── 비밀번호 재설정 ───────────────────────────────────────────────────────
+
+    @Column(name = "password_reset_token", length = 64)
+    private String passwordResetToken;
+
+    @Column(name = "password_reset_expires_at")
+    private OffsetDateTime passwordResetExpiresAt;
+
+    // ── 공통 ─────────────────────────────────────────────────────────────────
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 }
