@@ -6,8 +6,11 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableMethodSecurity
@@ -17,6 +20,11 @@ public class SecurityConfig {
 
     public SecurityConfig(JwtDecoder jwtDecoder) {
         this.jwtDecoder = jwtDecoder;
+    }
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
@@ -48,6 +56,9 @@ public class SecurityConfig {
         http.securityMatcher("/api/admin/**")
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .addFilterBefore(
+                new CookieBearerTokenFilter("admin_access_token"),
+                UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt
@@ -64,6 +75,9 @@ public class SecurityConfig {
         http.securityMatcher("/api/ops/**")
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .addFilterBefore(
+                new CookieBearerTokenFilter("ops_access_token"),
+                UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/ops/health").permitAll()
                 .anyRequest().authenticated()
@@ -83,6 +97,9 @@ public class SecurityConfig {
         http.securityMatcher("/api/app/**")
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .addFilterBefore(
+                new CookieBearerTokenFilter("app_access_token"),
+                UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/app/analytics/**").authenticated()
                 .anyRequest().permitAll()   // ✅ 핵심: app은 기본 공개

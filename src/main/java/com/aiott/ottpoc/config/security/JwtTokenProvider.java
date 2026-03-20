@@ -29,6 +29,10 @@ public class JwtTokenProvider {
         ), List.of("ROLE_ADMIN"));
     }
 
+    public String issueAppToken(String subject, String role) {
+        return issueToken(subject, "app", List.of(), List.of(role));
+    }
+
     public String issueOpsToken(String subject) {
         return issueToken(subject, "ops", List.of(
                 Permissions.METRICS_READ, Permissions.LOGS_READ,

@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(psql:*)",
+      "Bash(./gradlew bootRun)",
+      "Bash(lsof -ti:8080)",
+      "Bash(xargs kill:*)",
+      "Bash(PORT=8099 ./gradlew bootRun)",
+      "Bash(PORT=8099 timeout 60 ./gradlew bootRun)",
+      "Bash(lsof -ti:8080 -ti:8099)",
+      "Bash(lsof -ti:8099)",
+      "Bash(PORT=8099 timeout 60 ./gradlew bootRun --debug)",
+      "Bash(PORT=8099 timeout 60 ./gradlew bootRun -Ddebug)",
+      "Bash(PORT=8099 timeout 60 env JAVA_TOOL_OPTIONS=-Ddebug ./gradlew bootRun)",
+      "Bash(grep -iA2 \"FlywayAutoConfiguration\")",
+      "Bash(PORT=8099 timeout 60 ./gradlew bootRun --args=--debug)",
+      "Bash(grep -iA3 \"Flyway\")",
+      "Bash(PORT=8099 timeout 60 ./gradlew bootRun --args=--debug 2)",
+      "Bash(grep -iA3 \"flyway\")",
+      "Bash(PORT=8099 timeout 90 ./gradlew bootRun 2)",
+      "Bash(PORT=8099 timeout 90 ./gradlew bootRun)",
+      "Bash(python3:*)",
+      "Bash(curl -s -X POST http://localhost:8080/auth/signup -H \"Content-Type: application/json\" -d '{\"\"\"\"username\"\"\"\":\"\"\"\"testuser\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"test1234\"\"\"\"}')",
+      "Bash(curl:*)"
+    ]
+  }
+}
