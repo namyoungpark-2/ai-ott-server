@@ -3,9 +3,9 @@ spring:
     name: ott-poc
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/aiott
-    username: aiott
-    password: aiott_pw
+    url: ${DB_URL:jdbc:postgresql://dpg-d6oonotm5p6s73fju5jg-a/aiott}
+    username: ${DB_USERNAME:aiott}
+    password: ${DB_PASSWORD:aiott_pw}
 
   jpa:
     hibernate:
@@ -14,6 +14,7 @@ spring:
 
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         default_batch_fetch_size: 100
         jdbc:
           time_zone: UTC
@@ -25,6 +26,9 @@ spring:
     baseline-on-migrate: true
     validate-on-migrate: true
 
+
+  main:
+    lazy-initialization: true
 
   servlet:
     multipart:
@@ -38,25 +42,56 @@ logging:
     org.flywaydb.core.internal.command: debug
 
 app:
-  video:
-    original-dir: ./videos/original
-    hls-dir: ./videos/hls
-    thumbnail-dir: ./videos/thumbnails
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   storage:
-    upload-dir: ./data/uploads
-    hls-dir: ./data/hls
+    type: ${STORAGE_TYPE:local}      # local | r2
+    upload-dir: ${UPLOAD_DIR:./data/uploads}
+    hls-dir: ${HLS_DIR:./data/hls}
+    temp-dir: ${TEMP_DIR:./data/tmp}
+  r2:
+    account-id: ${R2_ACCOUNT_ID:}
+    access-key-id: ${R2_ACCESS_KEY_ID:}
+    secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+    bucket: ${R2_BUCKET:}
+    public-url: ${R2_PUBLIC_URL:}    # e.g. https://pub-xxxxxxxx.r2.dev
   ffmpeg:
-    path: ffmpeg
+    path: ${FFMPEG_PATH:ffmpeg}
+  web:
+    base-url: ${WEB_BASE_URL:http://localhost:3000}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:noreply@ai-ott.com}
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+    basic-price-id: ${STRIPE_BASIC_PRICE_ID:price_basic_placeholder}
+    premium-price-id: ${STRIPE_PREMIUM_PRICE_ID:price_premium_placeholder}
+
+# SendGrid SMTP 릴레이 설정 예시 (MAIL_ENABLED=true 시 활성화)
+# spring:
+#   mail:
+#     host: ${SMTP_HOST:smtp.sendgrid.net}
+#     port: ${SMTP_PORT:587}
+#     username: ${SMTP_USERNAME:apikey}
+#     password: ${SMTP_PASSWORD:}
+#     properties:
+#       mail.smtp.auth: true
+#       mail.smtp.starttls.enable: true
 
 management:
   endpoints:
     web:
       exposure:
-        include: flyway,mappings
+        include: health,flyway,mappings
+  endpoint:
+    health:
+      show-details: never
 
 security:
   jwt:
-    secret: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
+    # 운영환경: openssl rand -base64 48 로 생성 후 JWT_SECRET 환경변수로 주입
+    secret: ${JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32CHARS_MIN}
 
 server:
   port: ${PORT:8080}

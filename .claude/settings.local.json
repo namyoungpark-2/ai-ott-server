@@ -21,7 +21,13 @@
       "Bash(PORT=8099 timeout 90 ./gradlew bootRun)",
       "Bash(python3:*)",
       "Bash(curl -s -X POST http://localhost:8080/auth/signup -H \"Content-Type: application/json\" -d '{\"\"\"\"username\"\"\"\":\"\"\"\"testuser\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"test1234\"\"\"\"}')",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(./gradlew compileJava)",
+      "Bash(grep -v \"^$\")",
+      "Bash(git add:*)",
+      "Bash(java -version)",
+      "Bash(nc -z -w5 ai-ott.cdwe46awwgup.us-west-2.rds.amazonaws.com 5432)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
