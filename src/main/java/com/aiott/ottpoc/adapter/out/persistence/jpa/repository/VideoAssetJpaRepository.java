@@ -11,6 +11,8 @@ import java.util.List;
 public interface VideoAssetJpaRepository extends JpaRepository<VideoAssetJpaEntity, UUID> {
     Optional<VideoAssetJpaEntity> findFirstByContentIdAndStatus(UUID contentId, String status);
 
+    Optional<VideoAssetJpaEntity> findFirstByContentIdOrderByCreatedAtDesc(UUID contentId);
+
 
     @Query(value = """
         select

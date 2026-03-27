@@ -31,12 +31,14 @@ public class ContentViewQueryAdapter implements ContentViewQueryPort {
                 then concat('/hls/', va.id::text, '/master.m3u8')
               else null
             end as stream_url,
-            null as thumbnail_url,
-            va.error_message,
             case
               when va.id is not null then concat('/thumbnails/', va.id::text, '.jpg')
               else null
-            end as thumbnail_url
+            end as thumbnail_url,
+            va.error_message,
+            va.video_width,
+            va.video_height,
+            va.duration_ms
           from content c
           left join lateral (
             select ci1.title
@@ -66,13 +68,29 @@ public class ContentViewQueryAdapter implements ContentViewQueryPort {
                 .setParameter("lang", lang)
                 .getSingleResult();
 
+        Integer videoWidth = r[6] == null ? null : ((Number) r[6]).intValue();
+        Integer videoHeight = r[7] == null ? null : ((Number) r[7]).intValue();
+        Long durationMs = r[8] == null ? null : ((Number) r[8]).longValue();
+
         return new ContentViewResult(
                 (UUID) r[0],
                 (String) r[1],
                 (String) r[2],
                 (String) r[3],
                 (String) r[4],
-                (String) r[5]
+                (String) r[5],
+                videoWidth,
+                videoHeight,
+                resolveOrientation(videoWidth, videoHeight),
+                durationMs
         );
+    }
+
+    private String resolveOrientation(Integer w, Integer h) {
+        if (w == null || h == null || w == 0 || h == 0) return null;
+        double ratio = (double) w / h;
+        if (ratio >= 1.2) return "LANDSCAPE";
+        if (ratio <= 0.8) return "PORTRAIT";
+        return "SQUARE";
     }
 }

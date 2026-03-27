@@ -1,5 +1,6 @@
 package com.aiott.ottpoc.adapter.in.web.app;
 
+import com.aiott.ottpoc.adapter.in.web.LangResolver;
 import com.aiott.ottpoc.application.dto.WatchProgressItem;
 import com.aiott.ottpoc.application.port.in.UserWatchProgressUseCase;
 import lombok.RequiredArgsConstructor;
@@ -12,13 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * User self-service endpoints (all require authentication).
- *
- * GET  /api/app/me/continue-watching             – in-progress content list
- * GET  /api/app/me/playback-progress/{contentId} – position for a single content
- * POST /api/app/me/playback-progress/{contentId} – save / update position
- */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/app/me")
@@ -29,9 +23,9 @@ public class MeController {
     @GetMapping("/continue-watching")
     public List<WatchProgressItem> continueWatching(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestParam(name = "lang", defaultValue = "en") String lang) {
+            @RequestParam(required = false) String lang) {
         UUID userId = UUID.fromString(jwt.getSubject());
-        return progressUseCase.getContinueWatching(userId, lang);
+        return progressUseCase.getContinueWatching(userId, LangResolver.resolve(lang));
     }
 
     @GetMapping("/playback-progress/{contentId}")

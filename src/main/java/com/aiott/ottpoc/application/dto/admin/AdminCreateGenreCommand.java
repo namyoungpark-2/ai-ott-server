@@ -1,13 +1,10 @@
 package com.aiott.ottpoc.application.dto.admin;
 
-public record AdminCreateCategoryCommand(
+public record AdminCreateGenreCommand(
         String slug,
         String label,
         String description,
         Integer sortOrder,
         Boolean active,
-        String lang,
-        String iabCode,
-        Integer tier,
-        String parentSlug
+        String lang
 ) {}

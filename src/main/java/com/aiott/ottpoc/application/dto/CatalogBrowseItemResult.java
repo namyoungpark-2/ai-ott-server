@@ -18,5 +18,10 @@ public record CatalogBrowseItemResult(
         UUID seasonId,
         Integer episodeNumber,
         List<String> categories,
-        List<String> tags
+        List<String> genres,
+        List<String> tags,
+        Integer videoWidth,
+        Integer videoHeight,
+        String orientation,
+        Long durationMs
 ) {}

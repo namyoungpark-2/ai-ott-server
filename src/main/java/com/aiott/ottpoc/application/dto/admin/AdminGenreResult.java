@@ -2,14 +2,11 @@ package com.aiott.ottpoc.application.dto.admin;
 
 import java.util.UUID;
 
-public record AdminCategoryResult(
+public record AdminGenreResult(
         UUID id,
         String slug,
         String label,
         String description,
         int sortOrder,
-        boolean active,
-        String iabCode,
-        int tier,
-        UUID parentId
+        boolean active
 ) {}

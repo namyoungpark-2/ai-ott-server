@@ -4,5 +4,7 @@ import java.util.List;
 
 public record AdminUpdateContentTaxonomyCommand(
         List<String> categorySlugs,
-        List<String> tags
+        List<String> genreSlugs,
+        List<String> tags,
+        String lang
 ) {}

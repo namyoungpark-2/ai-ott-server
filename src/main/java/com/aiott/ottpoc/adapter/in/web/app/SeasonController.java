@@ -1,5 +1,6 @@
 package com.aiott.ottpoc.adapter.in.web.app;
 
+import com.aiott.ottpoc.adapter.in.web.LangResolver;
 import com.aiott.ottpoc.application.dto.EpisodeResult;
 import com.aiott.ottpoc.application.port.in.GetSeasonEpisodesUseCase;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +19,8 @@ public class SeasonController {
     @GetMapping("/{seasonId}/episodes")
     public List<EpisodeResult> getEpisodes(
             @PathVariable UUID seasonId,
-            @RequestParam(defaultValue = "en") String lang
+            @RequestParam(required = false) String lang
     ) {
-        return getSeasonEpisodesUseCase.getSeasonEpisodes(seasonId, lang);
+        return getSeasonEpisodesUseCase.getSeasonEpisodes(seasonId, LangResolver.resolve(lang));
     }
 }

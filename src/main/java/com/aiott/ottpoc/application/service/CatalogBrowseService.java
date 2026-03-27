@@ -17,16 +17,22 @@ public class CatalogBrowseService implements GetCatalogBrowseUseCase {
 
     @Override
     public CatalogBrowseResponse getBrowse(String lang, int sectionLimit) {
+        var categories = queryPort.loadActiveCategories(lang);
+        var genres = queryPort.loadActiveGenres(lang);
+
         List<CatalogBrowseSectionResult> sections = new ArrayList<>();
         sections.add(new CatalogBrowseSectionResult("featured", "Featured", queryPort.loadFeatured(lang, Math.min(sectionLimit, 6))));
         sections.add(new CatalogBrowseSectionResult("latest-movies", "Latest Movies", queryPort.loadLatestMovies(lang, sectionLimit)));
         sections.add(new CatalogBrowseSectionResult("latest-series", "Latest Episodes", queryPort.loadLatestSeriesEpisodes(lang, sectionLimit)));
-        queryPort.loadActiveCategories().forEach(category -> {
+
+        // 카테고리별 섹션
+        categories.forEach(category -> {
             var items = queryPort.loadByCategory(lang, category.slug(), sectionLimit);
             if (!items.isEmpty()) {
                 sections.add(new CatalogBrowseSectionResult(category.slug(), category.label(), items));
             }
         });
-        return new CatalogBrowseResponse(sections);
+
+        return new CatalogBrowseResponse(sections, categories, genres);
     }
 }

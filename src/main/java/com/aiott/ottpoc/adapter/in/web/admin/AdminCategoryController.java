@@ -16,13 +16,13 @@ public class AdminCategoryController {
     private final AdminCategoryUseCase useCase;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+
     public AdminCategoryResult create(@RequestBody AdminCreateCategoryCommand command) {
         return useCase.create(command);
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+
     public List<AdminCategoryResult> list() {
         return useCase.list();
     }

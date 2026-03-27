@@ -33,6 +33,15 @@ public class VideoAssetJpaEntity {
     @Column(name="error_message", columnDefinition="text")
     private String errorMessage;
 
+    @Column(name="video_width")
+    private Integer videoWidth;
+
+    @Column(name="video_height")
+    private Integer videoHeight;
+
+    @Column(name="duration_ms")
+    private Long durationMs;
+
     @Column(name="created_at")
     private OffsetDateTime createdAt;
 

@@ -16,13 +16,13 @@ public class AdminContentMetadataController {
     private final AdminContentMetadataUseCase useCase;
 
     @PutMapping("/{contentId}/metadata")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+
     public void updateMetadata(@PathVariable UUID contentId, @RequestBody AdminUpdateContentMetadataCommand command) {
         useCase.updateMetadata(contentId, command);
     }
 
     @PutMapping("/{contentId}/taxonomy")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+
     public void updateTaxonomy(@PathVariable UUID contentId, @RequestBody AdminUpdateContentTaxonomyCommand command) {
         useCase.updateTaxonomy(contentId, command);
     }

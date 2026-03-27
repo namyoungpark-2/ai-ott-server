@@ -9,5 +9,8 @@ public record WatchProgressItem(
         long positionMs,
         Long durationMs,
         /** 0-100, null if durationMs is unknown */
-        Integer progressPercent
+        Integer progressPercent,
+        Integer videoWidth,
+        Integer videoHeight,
+        String orientation
 ) {}

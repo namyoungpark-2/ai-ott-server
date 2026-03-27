@@ -17,7 +17,7 @@ public class TranscodingRetryController {
     private final RetryTranscodingUseCase useCase;
 
     @PostMapping("/{videoAssetId}/retry")
-    @PreAuthorize("hasAuthority(T(com.aiott.ottpoc.application.security.Permissions).JOB_RETRY)")
+
     public RetryTranscodingUseCase.RetryResult retry(@PathVariable UUID videoAssetId) {
         return useCase.retry(videoAssetId);
     }

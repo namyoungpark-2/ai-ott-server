@@ -19,4 +19,15 @@ public class GlobalExceptionHandler {
                 )
         );
     }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleAll(Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                Map.of(
+                        "error", e.getClass().getSimpleName(),
+                        "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
+                )
+        );
+    }
 }

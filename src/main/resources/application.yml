@@ -3,7 +3,7 @@ spring:
     name: ott-poc
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://dpg-d6oonotm5p6s73fju5jg-a/aiott}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/aiott}
     username: ${DB_USERNAME:aiott}
     password: ${DB_PASSWORD:aiott_pw}
 
@@ -43,7 +43,7 @@ logging:
 
 app:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,https://ai-ott-admin.jarneg23.workers.dev,https://ai-ott-web.jarneg23.workers.dev}
   storage:
     type: ${STORAGE_TYPE:local}      # local | r2
     upload-dir: ${UPLOAD_DIR:./data/uploads}

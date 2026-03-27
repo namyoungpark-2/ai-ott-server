@@ -7,6 +7,8 @@ import com.aiott.ottpoc.application.port.out.TranscodingPort;
 import com.aiott.ottpoc.application.port.out.TranscodingJobPort;
 import com.aiott.ottpoc.application.port.out.ThumbnailPort;
 import com.aiott.ottpoc.application.port.out.VideoAssetCommandPort;
+import com.aiott.ottpoc.application.port.out.VideoProbePort;
+import com.aiott.ottpoc.application.port.out.CatalogCommandPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,6 +29,8 @@ public class TranscodeVideoAssetService implements TranscodeVideoAssetUseCase {
     private final MediaStoragePort mediaStoragePort;
     private final TranscodingPort transcodingPort;
     private final ThumbnailPort thumbnailPort;
+    private final VideoProbePort videoProbePort;
+    private final CatalogCommandPort catalogCommandPort;
 
     @Async
     @Override
@@ -46,6 +50,10 @@ public class TranscodeVideoAssetService implements TranscodeVideoAssetUseCase {
             // Resolve source to a local path (downloads from R2 if needed)
             source = mediaStoragePort.fetchSourceForTranscoding(asset.sourceKey(), videoAssetId);
 
+            // Probe video metadata (width, height, duration)
+            var meta = videoProbePort.probe(source);
+            videoAssetCommandPort.updateMediaMetadata(videoAssetId, meta.width(), meta.height(), meta.durationMs());
+
             // Create local temp dirs for FFmpeg output
             outputDir = storagePort.getHlsOutputDir(videoAssetId.toString()).toAbsolutePath();
             thumb = storagePort.getThumbnailPath(videoAssetId.toString());
@@ -59,9 +67,10 @@ public class TranscodeVideoAssetService implements TranscodeVideoAssetUseCase {
             mediaStoragePort.storeThumbnail(videoAssetId, thumb);
 
             videoAssetCommandPort.markReady(videoAssetId, hlsMasterKey);
+            catalogCommandPort.updateContentStatus(asset.contentId(), "PUBLISHED");
             if (jobId != null) jobPort.markSucceeded(jobId);
 
-            log.info("[TRANSCODE] Done assetId={} masterUrl={}", videoAssetId, hlsMasterKey);
+            log.info("[TRANSCODE] Done assetId={} contentId={} masterUrl={}", videoAssetId, asset.contentId(), hlsMasterKey);
 
         } catch (Exception e) {
             log.error("[TRANSCODE] Failed assetId={}", videoAssetId, e);

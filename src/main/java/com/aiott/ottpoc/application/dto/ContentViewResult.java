@@ -8,5 +8,9 @@ public record ContentViewResult(
         String status,        // PROCESSING | READY | FAILED
         String streamUrl,     // READY일 때만
         String thumbnailUrl,
-        String errorMessage
+        String errorMessage,
+        Integer videoWidth,
+        Integer videoHeight,
+        String orientation,
+        Long durationMs
 ) {}

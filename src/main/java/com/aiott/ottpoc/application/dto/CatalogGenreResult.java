@@ -1,10 +1,8 @@
 package com.aiott.ottpoc.application.dto;
 
-public record CatalogCategoryResult(
+public record CatalogGenreResult(
         String slug,
         String label,
         String description,
-        int sortOrder,
-        int tier,
-        String parentSlug
+        int sortOrder
 ) {}

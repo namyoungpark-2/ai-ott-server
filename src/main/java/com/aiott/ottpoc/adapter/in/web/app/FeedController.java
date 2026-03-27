@@ -1,5 +1,6 @@
 package com.aiott.ottpoc.adapter.in.web.app;
 
+import com.aiott.ottpoc.adapter.in.web.LangResolver;
 import com.aiott.ottpoc.application.dto.FeedItemDto;
 import com.aiott.ottpoc.application.port.in.GetFeedUseCase;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,7 @@ public class FeedController {
     private final GetFeedUseCase getFeedUseCase;
 
     @GetMapping("/feed")
-    public List<FeedItemDto> feed(@RequestParam(defaultValue = "en") String lang) {
-        return getFeedUseCase.getFeed(lang);
+    public List<FeedItemDto> feed(@RequestParam(required = false) String lang) {
+        return getFeedUseCase.getFeed(LangResolver.resolve(lang));
     }
 }

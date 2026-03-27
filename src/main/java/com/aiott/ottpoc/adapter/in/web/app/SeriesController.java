@@ -1,5 +1,6 @@
 package com.aiott.ottpoc.adapter.in.web.app;
 
+import com.aiott.ottpoc.adapter.in.web.LangResolver;
 import com.aiott.ottpoc.application.dto.SeriesDetailResult;
 import com.aiott.ottpoc.application.port.in.GetSeriesDetailUseCase;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +18,8 @@ public class SeriesController {
     @GetMapping("/{seriesId}")
     public SeriesDetailResult getSeriesDetail(
             @PathVariable UUID seriesId,
-            @RequestParam(defaultValue = "en") String lang
+            @RequestParam(required = false) String lang
     ) {
-        return getSeriesDetailUseCase.getSeriesDetail(seriesId, lang);
+        return getSeriesDetailUseCase.getSeriesDetail(seriesId, LangResolver.resolve(lang));
     }
 }

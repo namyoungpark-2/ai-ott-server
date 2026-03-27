@@ -16,15 +16,22 @@ public interface VideoAssetCommandPort {
 
     void markFailed(UUID videoAssetId, String errorMessage);
 
+    void updateMediaMetadata(UUID videoAssetId, Integer videoWidth, Integer videoHeight, Long durationMs);
+
     Optional<VideoAssetView> findReadyAssetByContentId(UUID contentId);
 
     Optional<VideoAssetView> findById(UUID videoAssetId);
+
+    Optional<VideoAssetView> findLatestByContentId(UUID contentId);
 
     record VideoAssetView(
             UUID id,
             UUID contentId,
             String sourceKey,
             String hlsMasterKey,
-            String status
+            String status,
+            Integer videoWidth,
+            Integer videoHeight,
+            Long durationMs
     ) {}
 }

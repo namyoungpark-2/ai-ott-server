@@ -1,5 +1,6 @@
 package com.aiott.ottpoc.adapter.in.web.admin;
 
+import com.aiott.ottpoc.adapter.in.web.LangResolver;
 import com.aiott.ottpoc.application.dto.admin.AdminContentSummary;
 import com.aiott.ottpoc.application.port.in.AdminContentQueryUseCase;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +21,10 @@ public class AdminFailuresController {
      */
     @GetMapping
     public List<FailureRow> list(
-            @RequestParam(defaultValue = "en") String lang,
+            @RequestParam(required = false) String lang,
             @RequestParam(defaultValue = "200") int limit
     ) {
-        return queryUseCase.list(lang, null, limit)
+        return queryUseCase.list(LangResolver.resolve(lang), null, limit)
                 .stream()
                 .map(FailureRow::from)
                 .toList();

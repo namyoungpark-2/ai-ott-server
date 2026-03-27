@@ -26,7 +26,9 @@ public class UserWatchProgressJdbcAdapter implements UserWatchProgressPort {
                          ELSE NULL
                     END AS thumbnail_url,
                     uwp.position_ms,
-                    uwp.duration_ms
+                    uwp.duration_ms,
+                    va.video_width,
+                    va.video_height
                 FROM user_watch_progress uwp
                 JOIN content c ON c.id = uwp.content_id AND c.status IN ('DRAFT','PUBLISHED')
                 LEFT JOIN LATERAL (
@@ -43,7 +45,7 @@ public class UserWatchProgressJdbcAdapter implements UserWatchProgressPort {
                     LIMIT 1
                 ) ci ON true
                 LEFT JOIN LATERAL (
-                    SELECT va1.id
+                    SELECT va1.id, va1.video_width, va1.video_height
                     FROM video_asset va1
                     WHERE va1.content_id = c.id AND va1.status = 'READY'
                     ORDER BY va1.created_at DESC
@@ -61,13 +63,20 @@ public class UserWatchProgressJdbcAdapter implements UserWatchProgressPort {
             long durMs = rs.getLong("duration_ms");
             boolean hasDuration = !rs.wasNull() && durMs > 0;
             Integer pct = hasDuration ? (int) Math.min(100, posMs * 100 / durMs) : null;
+            int vw = rs.getInt("video_width");
+            Integer videoWidth = rs.wasNull() ? null : vw;
+            int vh = rs.getInt("video_height");
+            Integer videoHeight = rs.wasNull() ? null : vh;
             return new WatchProgressItem(
                     UUID.fromString(rs.getString("content_id")),
                     rs.getString("title"),
                     rs.getString("thumbnail_url"),
                     posMs,
                     hasDuration ? durMs : null,
-                    pct
+                    pct,
+                    videoWidth,
+                    videoHeight,
+                    resolveOrientation(videoWidth, videoHeight)
             );
         }, lang, lang, userId, limit);
     }
@@ -79,6 +88,14 @@ public class UserWatchProgressJdbcAdapter implements UserWatchProgressPort {
                 (rs, rowNum) -> rs.getLong("position_ms"),
                 userId, contentId);
         return rows.isEmpty() ? 0L : rows.get(0);
+    }
+
+    private String resolveOrientation(Integer w, Integer h) {
+        if (w == null || h == null || w == 0 || h == 0) return null;
+        double ratio = (double) w / h;
+        if (ratio >= 1.2) return "LANDSCAPE";
+        if (ratio <= 0.8) return "PORTRAIT";
+        return "SQUARE";
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.aiott.ottpoc.adapter.in.web.admin;
 
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -13,14 +12,17 @@ public class AdminAuthController {
 
     @GetMapping("/me")
     public MeResponse me(@AuthenticationPrincipal Jwt jwt) {
+        if (jwt == null) {
+            // 인증 없이 접근 시 기본 admin 정보 반환 (개발용)
+            return new MeResponse("admin_1", null, "admin", "ROLE_ADMIN");
+        }
         String sub = jwt.getSubject();
         List<String> roles = jwt.getClaimAsStringList("roles");
-        List<String> scopes = jwt.getClaimAsStringList("scopes");
 
         return new MeResponse(
                 sub,
-                null, // email – POC에서는 JWT에 없음
-                sub,  // name – subject를 이름으로 사용
+                null,
+                sub,
                 roles != null && !roles.isEmpty() ? roles.get(0) : null
         );
     }

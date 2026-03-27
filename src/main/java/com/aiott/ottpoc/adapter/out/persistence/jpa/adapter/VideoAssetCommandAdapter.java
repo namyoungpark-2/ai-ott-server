@@ -45,7 +45,6 @@ public class VideoAssetCommandAdapter implements VideoAssetCommandPort {
         var e = repo.findById(videoAssetId).orElseThrow();
         e.setStatus(VideoAssetStatus.READY.name());
         e.setHlsMasterKey(hlsMasterKey);
-
         e.setUpdatedAt(OffsetDateTime.now());
         repo.save(e);
     }
@@ -60,14 +59,35 @@ public class VideoAssetCommandAdapter implements VideoAssetCommandPort {
     }
 
     @Override
+    public void updateMediaMetadata(UUID videoAssetId, Integer videoWidth, Integer videoHeight, Long durationMs) {
+        var e = repo.findById(videoAssetId).orElseThrow();
+        e.setVideoWidth(videoWidth);
+        e.setVideoHeight(videoHeight);
+        e.setDurationMs(durationMs);
+        e.setUpdatedAt(OffsetDateTime.now());
+        repo.save(e);
+    }
+
+    @Override
     public Optional<VideoAssetView> findReadyAssetByContentId(UUID contentId) {
         return repo.findFirstByContentIdAndStatus(contentId, VideoAssetStatus.READY.name())
-                .map(e -> new VideoAssetView(e.getId(), e.getContentId(), e.getSourceKey(), e.getHlsMasterKey(), e.getStatus()));
+                .map(this::toView);
     }
 
     @Override
     public Optional<VideoAssetView> findById(UUID videoAssetId) {
-        return repo.findById(videoAssetId)
-                .map(e -> new VideoAssetView(e.getId(), e.getContentId(), e.getSourceKey(), e.getHlsMasterKey(), e.getStatus()));
+        return repo.findById(videoAssetId).map(this::toView);
+    }
+
+    @Override
+    public Optional<VideoAssetView> findLatestByContentId(UUID contentId) {
+        return repo.findFirstByContentIdOrderByCreatedAtDesc(contentId).map(this::toView);
+    }
+
+    private VideoAssetView toView(VideoAssetJpaEntity e) {
+        return new VideoAssetView(
+                e.getId(), e.getContentId(), e.getSourceKey(), e.getHlsMasterKey(), e.getStatus(),
+                e.getVideoWidth(), e.getVideoHeight(), e.getDurationMs()
+        );
     }
 }

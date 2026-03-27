@@ -24,6 +24,7 @@ public class AdminCategoryService implements AdminCategoryUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AdminCategoryResult> list() {
         return queryPort.list();
     }
