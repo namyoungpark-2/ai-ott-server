@@ -358,16 +358,24 @@ Step 4: videoAssetStatus가 READY로 바뀌면 재생 가능
 
 ### 콘텐츠 상세 페이지
 
-기존 `GET /api/app/contents/{contentId}` 응답에는 아직 channel 정보가 포함되지 않음.
+> **서버 반영 완료:** `GET /api/app/contents/{contentId}` 응답에 `channelHandle`, `channelName` 필드가 이미 포함됨.
 
-> **TODO (서버):** ContentViewResult에 channelHandle, channelName 필드 추가 필요. 현재는 서버 수정이 필요한 영역.
-
-임시 방법: 콘텐츠 ID로 어떤 채널에 속하는지 알 수 없으므로, 서버 수정 전까지는 채널 링크 표시 불가.
+```json
+// GET /api/app/contents/{contentId} 응답 예시
+{
+  "id": "uuid",
+  "title": "test",
+  "status": "READY",
+  "channelHandle": "official",
+  "channelName": "AI OTT Official",
+  "..."
+}
+```
 
 ### 구현 체크리스트
 
-- [ ] (서버 수정 후) 콘텐츠 상세에 채널 링크 표시
-- [ ] (서버 수정 후) 피드 아이템에 채널명 표시
+- [ ] 콘텐츠 상세에 채널 링크 표시 (`channelHandle`로 `/channels/{handle}` 이동)
+- [ ] 피드 아이템에 채널명 표시 (피드 API에도 채널 정보 추가 필요 — 서버 TODO)
 
 ---
 
@@ -447,14 +455,13 @@ PUT /api/app/creator/channel
 
 ---
 
-## 6. 서버 추가 작업 필요 목록 (웹 관련 TODO)
+## 6. 서버 작업 상태 (웹 관련)
 
-프론트엔드 완전 통합을 위해 서버에서 추가로 필요한 작업:
-
-| # | 내용 | 우선순위 |
-|---|------|---------|
-| 1 | 크리에이터 전용 비디오 업로드 API (`POST /api/app/creator/contents/{id}/upload`) | 높음 |
-| 2 | ContentViewResult에 channelHandle, channelName 추가 | 높음 |
-| 3 | 채널 handle 변경 API | 낮음 |
-| 4 | 프로필/배너 이미지 업로드 API (또는 presigned URL) | 낮음 |
-| 5 | 구독 여부 확인 단일 API (`GET /api/app/channels/{handle}/subscription-status`) | 낮음 |
+| # | 내용 | 상태 |
+|---|------|------|
+| ~~1~~ | ~~ContentViewResult에 channelHandle, channelName 추가~~ | ✅ 완료 |
+| 2 | 크리에이터 전용 비디오 업로드 API (`POST /api/app/creator/contents/{id}/upload`) | ⏳ TODO |
+| 3 | 피드 API 응답에 채널 정보 추가 | ⏳ TODO |
+| 4 | 채널 handle 변경 API | 낮음 |
+| 5 | 프로필/배너 이미지 업로드 API (또는 presigned URL) | 낮음 |
+| 6 | 구독 여부 확인 단일 API (`GET /api/app/channels/{handle}/subscription-status`) | 낮음 |
