@@ -40,7 +40,7 @@ public class CreatorChannelService implements CreatorChannelUseCase {
         UUID channelId = channelQueryPort.findChannelIdByOwnerId(uid)
                 .orElseThrow(() -> new IllegalStateException("Channel not found"));
         channelCommandPort.updateChannel(channelId, cmd.name(), cmd.description(), cmd.profileImageUrl(), cmd.bannerImageUrl());
-        return channelQueryPort.findByOwnerId(uid, "en")
+        return channelQueryPort.findByOwnerId(uid, "ko")
                 .orElseThrow(() -> new RuntimeException("Channel not found after update"));
     }
 

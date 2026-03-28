@@ -23,7 +23,7 @@ public class ChannelSubscriptionService implements ChannelSubscriptionUseCase {
     @Transactional
     public void subscribe(String userId, String channelHandle) {
         UUID uid = UUID.fromString(userId);
-        UUID channelId = channelQueryPort.findByHandle(channelHandle, "en")
+        UUID channelId = channelQueryPort.findByHandle(channelHandle, "ko")
                 .orElseThrow(() -> new IllegalArgumentException("Channel not found: " + channelHandle))
                 .id();
         if (!subscriptionPort.isSubscribed(uid, channelId)) {
@@ -36,7 +36,7 @@ public class ChannelSubscriptionService implements ChannelSubscriptionUseCase {
     @Transactional
     public void unsubscribe(String userId, String channelHandle) {
         UUID uid = UUID.fromString(userId);
-        UUID channelId = channelQueryPort.findByHandle(channelHandle, "en")
+        UUID channelId = channelQueryPort.findByHandle(channelHandle, "ko")
                 .orElseThrow(() -> new IllegalArgumentException("Channel not found: " + channelHandle))
                 .id();
         if (subscriptionPort.isSubscribed(uid, channelId)) {
@@ -48,7 +48,7 @@ public class ChannelSubscriptionService implements ChannelSubscriptionUseCase {
     @Override
     public boolean isSubscribed(String userId, String channelHandle) {
         UUID uid = UUID.fromString(userId);
-        UUID channelId = channelQueryPort.findByHandle(channelHandle, "en")
+        UUID channelId = channelQueryPort.findByHandle(channelHandle, "ko")
                 .map(ch -> ch.id())
                 .orElse(null);
         if (channelId == null) return false;

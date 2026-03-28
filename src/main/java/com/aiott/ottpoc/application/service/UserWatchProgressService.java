@@ -17,7 +17,7 @@ public class UserWatchProgressService implements UserWatchProgressUseCase {
 
     @Override
     public List<WatchProgressItem> getContinueWatching(UUID userId, String lang) {
-        String effectiveLang = (lang == null || lang.isBlank()) ? "en" : lang;
+        String effectiveLang = (lang == null || lang.isBlank()) ? "ko" : lang;
         return port.findContinueWatching(userId, effectiveLang, 20);
     }
 

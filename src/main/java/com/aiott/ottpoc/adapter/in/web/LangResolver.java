@@ -8,7 +8,7 @@ import java.util.Locale;
 
 /**
  * Accept-Language 헤더 기반 언어 결정.
- * 우선순위: Accept-Language 헤더 → lang 쿼리 파라미터 → "en"
+ * 우선순위: Accept-Language 헤더 → lang 쿼리 파라미터 → "ko"
  */
 public final class LangResolver {
 
@@ -44,6 +44,6 @@ public final class LangResolver {
         }
 
         // 3. 기본값
-        return "en";
+        return "ko";
     }
 }
