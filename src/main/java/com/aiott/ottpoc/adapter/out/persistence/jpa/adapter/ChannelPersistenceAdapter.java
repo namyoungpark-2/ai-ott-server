@@ -166,6 +166,30 @@ public class ChannelPersistenceAdapter implements ChannelCommandPort, ChannelQue
     }
 
     @Override
+    public List<ChannelDetailResult> listPublicChannels(String lang, int limit, int offset) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery("""
+            SELECT c.id, c.handle, COALESCE(ci.name, c.name), COALESCE(ci.description, c.description),
+                   c.profile_image_url, c.banner_image_url, c.is_official, c.subscriber_count, c.status, c.created_at
+            FROM channel c
+            LEFT JOIN channel_i18n ci ON ci.channel_id = c.id AND ci.lang = :lang
+            WHERE c.status = 'ACTIVE'
+            ORDER BY c.subscriber_count DESC, c.created_at DESC
+            LIMIT :limit OFFSET :offset
+        """)
+        .setParameter("lang", lang)
+        .setParameter("limit", limit)
+        .setParameter("offset", offset)
+        .getResultList();
+
+        return rows.stream().map(r -> new ChannelDetailResult(
+            (UUID) r[0], (String) r[1], (String) r[2], (String) r[3],
+            (String) r[4], (String) r[5], (Boolean) r[6], ((Number) r[7]).intValue(),
+            (String) r[8], toOffsetDateTime(r[9])
+        )).toList();
+    }
+
+    @Override
     public List<ChannelContentResult> listContentsByChannelHandle(String handle, String lang, int limit, int offset) {
         @SuppressWarnings("unchecked")
         List<Object[]> rows = em.createNativeQuery("""

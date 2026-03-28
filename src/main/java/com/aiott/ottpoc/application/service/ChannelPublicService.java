@@ -16,6 +16,11 @@ public class ChannelPublicService implements ChannelPublicUseCase {
     private final ChannelQueryPort channelQueryPort;
 
     @Override
+    public List<ChannelDetailResult> listChannels(String lang, int limit, int offset) {
+        return channelQueryPort.listPublicChannels(lang, limit, offset);
+    }
+
+    @Override
     public ChannelDetailResult getChannel(String handle, String lang) {
         return channelQueryPort.findByHandle(handle, lang)
                 .orElseThrow(() -> new IllegalArgumentException("Channel not found: " + handle));

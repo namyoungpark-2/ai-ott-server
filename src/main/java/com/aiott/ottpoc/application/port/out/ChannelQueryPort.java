@@ -12,6 +12,7 @@ public interface ChannelQueryPort {
     Optional<UUID> findChannelIdByOwnerId(UUID ownerId);
     Optional<UUID> findOfficialChannelId();
     List<ChannelSummaryResult> listAll(int limit);
+    List<ChannelDetailResult> listPublicChannels(String lang, int limit, int offset);
     List<ChannelContentResult> listContentsByChannelHandle(String handle, String lang, int limit, int offset);
     List<ChannelSeriesResult> listSeriesByChannelHandle(String handle, String lang);
 }

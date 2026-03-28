@@ -16,6 +16,14 @@ import java.util.List;
 public class ChannelPublicController {
     private final ChannelPublicUseCase useCase;
 
+    @GetMapping
+    public List<ChannelDetailResult> listChannels(
+            @RequestParam(required = false) String lang,
+            @RequestParam(defaultValue = "24") int limit,
+            @RequestParam(defaultValue = "0") int offset) {
+        return useCase.listChannels(LangResolver.resolve(lang), limit, offset);
+    }
+
     @GetMapping("/{handle}")
     public ChannelDetailResult getChannel(
             @PathVariable String handle,
