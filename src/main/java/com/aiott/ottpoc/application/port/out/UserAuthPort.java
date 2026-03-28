@@ -19,6 +19,11 @@ public interface UserAuthPort {
     void updatePassword(UUID userId, String newPasswordHash);
     void clearPasswordResetToken(UUID userId);
 
+    // 계정 관리
+    Optional<UserRecord> findById(UUID userId);
+    void updateUsername(UUID userId, String newUsername);
+    void deleteUser(UUID userId);
+
     record UserRecord(
             UUID id,
             String username,

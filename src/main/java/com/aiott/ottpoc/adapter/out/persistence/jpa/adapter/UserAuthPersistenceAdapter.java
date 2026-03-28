@@ -97,6 +97,24 @@ public class UserAuthPersistenceAdapter implements UserAuthPort {
         });
     }
 
+    @Override
+    public Optional<UserRecord> findById(UUID userId) {
+        return repo.findById(userId).map(this::toRecord);
+    }
+
+    @Override
+    public void updateUsername(UUID userId, String newUsername) {
+        repo.findById(userId).ifPresent(u -> {
+            u.setUsername(newUsername);
+            repo.save(u);
+        });
+    }
+
+    @Override
+    public void deleteUser(UUID userId) {
+        repo.deleteById(userId);
+    }
+
     private UserRecord toRecord(UserJpaEntity e) {
         return new UserRecord(
                 e.getId(),
