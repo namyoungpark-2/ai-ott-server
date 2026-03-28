@@ -10,6 +10,27 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, Object>> handleSecurity(SecurityException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                Map.of("error", "Unauthorized", "message", e.getMessage() != null ? e.getMessage() : "Not authenticated")
+        );
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleBadRequest(IllegalArgumentException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                Map.of("error", "BadRequest", "message", e.getMessage() != null ? e.getMessage() : "Invalid request")
+        );
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(IllegalStateException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                Map.of("error", "Conflict", "message", e.getMessage() != null ? e.getMessage() : "Invalid state")
+        );
+    }
+
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, Object>> handleMaxUpload(MaxUploadSizeExceededException e) {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(
