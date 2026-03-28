@@ -46,8 +46,11 @@ public class AdminContentQueryAdapter implements AdminContentQueryPort {
             case when va.status = 'READY' then concat('/hls/', va.id::text, '/master.m3u8') else null end as stream_url,
 
             c.created_at,
-            c.updated_at
+            c.updated_at,
+            ch.handle as channel_handle,
+            ch.name as channel_name
           from content c
+          left join channel ch on ch.id = c.channel_id
           left join lateral (
             select ci1.title
             from content_i18n ci1
@@ -93,7 +96,9 @@ public class AdminContentQueryAdapter implements AdminContentQueryPort {
                 (String) r[9],
                 (String) r[10],
                 r[11] == null ? null : toOffsetDateTime(r[11]),
-                r[12] == null ? null : toOffsetDateTime(r[12])
+                r[12] == null ? null : toOffsetDateTime(r[12]),
+                (String) r[13],
+                (String) r[14]
         )).toList();
     }
 

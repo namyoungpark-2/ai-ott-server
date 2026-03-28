@@ -12,5 +12,7 @@ public record ContentViewResult(
         Integer videoWidth,
         Integer videoHeight,
         String orientation,
-        Long durationMs
+        Long durationMs,
+        String channelHandle,
+        String channelName
 ) {}

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>AI OTT - Creator/Channel System Design</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; padding: 40px; max-width: 1200px; margin: 0 auto; }
+  h1 { color: #fff; font-size: 28px; margin-bottom: 8px; }
+  h2 { color: #bb86fc; font-size: 22px; margin: 40px 0 20px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+  h3 { color: #03dac6; font-size: 16px; margin: 20px 0 12px; }
+  .subtitle { color: #888; font-size: 14px; margin-bottom: 40px; }
+
+  .erd { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; margin: 30px 0; }
+  .table-card {
+    background: #1e1e2e; border: 1px solid #333; border-radius: 12px;
+    min-width: 260px; max-width: 300px; overflow: hidden;
+  }
+  .table-card.new { border-color: #bb86fc; box-shadow: 0 0 12px rgba(187,134,252,0.15); }
+  .table-card.modified { border-color: #03dac6; box-shadow: 0 0 12px rgba(3,218,198,0.15); }
+  .table-header {
+    padding: 12px 16px; font-weight: 700; font-size: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .table-card.new .table-header { background: #2d1f4e; color: #bb86fc; }
+  .table-card.modified .table-header { background: #1a3a36; color: #03dac6; }
+  .table-card .table-header { background: #252535; color: #aaa; }
+  .badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .badge.new-badge { background: #bb86fc33; color: #bb86fc; }
+  .badge.mod-badge { background: #03dac633; color: #03dac6; }
+  .table-body { padding: 8px 0; }
+  .field { padding: 6px 16px; font-size: 13px; display: flex; justify-content: space-between; border-bottom: 1px solid #2a2a3a; }
+  .field:last-child { border-bottom: none; }
+  .field-name { color: #e0e0e0; }
+  .field-name.pk { color: #ffd600; }
+  .field-name.fk { color: #ff7043; }
+  .field-name.new-field { color: #bb86fc; font-weight: 600; }
+  .field-type { color: #666; font-size: 12px; }
+
+  .flow-container { background: #1e1e2e; border-radius: 12px; padding: 32px; margin: 20px 0; border: 1px solid #333; }
+  .flow-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+  .flow-box {
+    padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    text-align: center; min-width: 140px;
+  }
+  .flow-box.user { background: #1a237e; color: #82b1ff; border: 1px solid #304ffe; }
+  .flow-box.system { background: #1b5e20; color: #69f0ae; border: 1px solid #2e7d32; }
+  .flow-box.admin { background: #4a148c; color: #ce93d8; border: 1px solid #6a1b9a; }
+  .flow-box.data { background: #263238; color: #80cbc4; border: 1px solid #37474f; }
+  .flow-arrow { color: #555; font-size: 20px; }
+
+  .legend { display: flex; gap: 24px; margin: 20px 0; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .legend-color { width: 16px; height: 16px; border-radius: 4px; border: 2px solid; }
+
+  .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 20px 0; }
+  .comp-card { background: #1e1e2e; border-radius: 12px; padding: 24px; border: 1px solid #333; }
+  .comp-card h4 { margin-bottom: 12px; font-size: 14px; }
+  .comp-card.before h4 { color: #ff5252; }
+  .comp-card.after h4 { color: #69f0ae; }
+  .comp-card ul { list-style: none; padding: 0; }
+  .comp-card li { padding: 6px 0; font-size: 13px; border-bottom: 1px solid #2a2a3a; }
+  .comp-card li:last-child { border-bottom: none; }
+
+  .api-group { background: #1e1e2e; border-radius: 12px; padding: 24px; margin: 16px 0; border: 1px solid #333; }
+  .api-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #2a2a3a; font-size: 13px; }
+  .api-row:last-child { border-bottom: none; }
+  .method { padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; min-width: 56px; text-align: center; }
+  .method.get { background: #1b5e20; color: #69f0ae; }
+  .method.post { background: #e65100; color: #ffab40; }
+  .method.put { background: #1a237e; color: #82b1ff; }
+  .method.patch { background: #4a148c; color: #ce93d8; }
+  .method.delete { background: #b71c1c; color: #ef9a9a; }
+  .api-path { color: #fff; font-family: monospace; }
+  .api-desc { color: #888; margin-left: auto; }
+
+  .note { background: #1a1a2e; border-left: 3px solid #bb86fc; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0; font-size: 13px; }
+  .note strong { color: #bb86fc; }
+</style>
+</head>
+<body>
+
+<h1>AI OTT — Creator & Channel System Design</h1>
+<p class="subtitle">YouTube-style UGC + Netflix-style Curation Hybrid Architecture</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-color" style="border-color: #bb86fc; background: #2d1f4e;"></div> New Table</div>
+  <div class="legend-item"><div class="legend-color" style="border-color: #03dac6; background: #1a3a36;"></div> Modified Table</div>
+  <div class="legend-item"><div class="legend-color" style="border-color: #555; background: #252535;"></div> Existing (unchanged)</div>
+  <div class="legend-item"><span style="color:#ffd600;">PK</span></div>
+  <div class="legend-item"><span style="color:#ff7043;">FK</span></div>
+  <div class="legend-item"><span style="color:#bb86fc;">New Field</span></div>
+</div>
+
+<!-- ==================== DATA MODEL ==================== -->
+<h2>1. Data Model (ERD)</h2>
+
+<div class="erd">
+
+  <div class="table-card new">
+    <div class="table-header">channel <span class="badge new-badge">NEW</span></div>
+    <div class="table-body">
+      <div class="field"><span class="field-name pk">id</span><span class="field-type">UUID PK</span></div>
+      <div class="field"><span class="field-name fk">owner_id</span><span class="field-type">UUID FK → users</span></div>
+      <div class="field"><span class="field-name">handle</span><span class="field-type">VARCHAR(50) UNIQUE</span></div>
+      <div class="field"><span class="field-name">name</span><span class="field-type">VARCHAR(100)</span></div>
+      <div class="field"><span class="field-name">description</span><span class="field-type">TEXT</span></div>
+      <div class="field"><span class="field-name">profile_image_url</span><span class="field-type">VARCHAR(500)</span></div>
+      <div class="field"><span class="field-name">banner_image_url</span><span class="field-type">VARCHAR(500)</span></div>
+      <div class="field"><span class="field-name">is_official</span><span class="field-type">BOOLEAN default false</span></div>
+      <div class="field"><span class="field-name">subscriber_count</span><span class="field-type">INT default 0</span></div>
+      <div class="field"><span class="field-name">status</span><span class="field-type">ACTIVE / SUSPENDED</span></div>
+      <div class="field"><span class="field-name">created_at</span><span class="field-type">TIMESTAMPTZ</span></div>
+      <div class="field"><span class="field-name">updated_at</span><span class="field-type">TIMESTAMPTZ</span></div>
+    </div>
+  </div>
+
+  <div class="table-card new">
+    <div class="table-header">channel_i18n <span class="badge new-badge">NEW</span></div>
+    <div class="table-body">
+      <div class="field"><span class="field-name pk">id</span><span class="field-type">BIGSERIAL PK</span></div>
+      <div class="field"><span class="field-name fk">channel_id</span><span class="field-type">UUID FK → channel</span></div>
+      <div class="field"><span class="field-name">lang</span><span class="field-type">VARCHAR(10)</span></div>
+      <div class="field"><span class="field-name">name</span><span class="field-type">VARCHAR(100)</span></div>
+      <div class="field"><span class="field-name">description</span><span class="field-type">TEXT</span></div>
+    </div>
+  </div>
+
+  <div class="table-card new">
+    <div class="table-header">channel_subscription <span class="badge new-badge">NEW</span></div>
+    <div class="table-body">
+      <div class="field"><span class="field-name pk fk">subscriber_id</span><span class="field-type">UUID PK FK → users</span></div>
+      <div class="field"><span class="field-name pk fk">channel_id</span><span class="field-type">UUID PK FK → channel</span></div>
+      <div class="field"><span class="field-name">created_at</span><span class="field-type">TIMESTAMPTZ</span></div>
+    </div>
+  </div>
+
+  <div class="table-card modified">
+    <div class="table-header">content <span class="badge mod-badge">MODIFIED</span></div>
+    <div class="table-body">
+      <div class="field"><span class="field-name pk">id</span><span class="field-type">UUID PK</span></div>
+      <div class="field"><span class="field-name new-field fk">channel_id</span><span class="field-type">UUID FK → channel (NEW)</span></div>
+      <div class="field"><span class="field-name">content_type</span><span class="field-type">VARCHAR(20)</span></div>
+      <div class="field"><span class="field-name">status</span><span class="field-type">VARCHAR(20)</span></div>
+      <div class="field"><span class="field-name fk">series_id</span><span class="field-type">UUID FK nullable</span></div>
+      <div class="field"><span class="field-name">required_tier</span><span class="field-type">VARCHAR(20)</span></div>
+      <div class="field"><span class="field-name">...</span><span class="field-type">(existing fields)</span></div>
+    </div>
+  </div>
+
+  <div class="table-card modified">
+    <div class="table-header">series <span class="badge mod-badge">MODIFIED</span></div>
+    <div class="table-body">
+      <div class="field"><span class="field-name pk">id</span><span class="field-type">UUID PK</span></div>
+      <div class="field"><span class="field-name new-field fk">channel_id</span><span class="field-type">UUID FK → channel (NEW)</span></div>
+      <div class="field"><span class="field-name">status</span><span class="field-type">VARCHAR(20)</span></div>
+      <div class="field"><span class="field-name">default_language</span><span class="field-type">VARCHAR(10)</span></div>
+      <div class="field"><span class="field-name">...</span><span class="field-type">(existing fields)</span></div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">users (existing)</div>
+    <div class="table-body">
+      <div class="field"><span class="field-name pk">id</span><span class="field-type">UUID PK</span></div>
+      <div class="field"><span class="field-name">username</span><span class="field-type">VARCHAR(50)</span></div>
+      <div class="field"><span class="field-name">role</span><span class="field-type">USER / ADMIN</span></div>
+      <div class="field"><span class="field-name">subscription_tier</span><span class="field-type">FREE / BASIC / PREMIUM</span></div>
+      <div class="field"><span class="field-name">...</span><span class="field-type">(auth fields)</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="note">
+  <strong>Relationship Summary:</strong><br>
+  users 1 ←→ 1 channel (한 유저 = 한 채널)<br>
+  channel 1 ←→ N content (채널이 콘텐츠를 소유)<br>
+  channel 1 ←→ N series (채널이 시리즈를 소유)<br>
+  users N ←→ N channel via channel_subscription (구독)
+</div>
+
+<!-- ==================== AS-IS vs TO-BE ==================== -->
+<h2>2. AS-IS → TO-BE</h2>
+
+<div class="comparison">
+  <div class="comp-card before">
+    <h4>AS-IS (현재)</h4>
+    <ul>
+      <li>Admin만 콘텐츠 업로드/관리</li>
+      <li>콘텐츠에 소유자 개념 없음</li>
+      <li>User = 시청자 역할만</li>
+      <li>단일 카탈로그 (넷플릭스형)</li>
+      <li>채널/크리에이터 시스템 없음</li>
+    </ul>
+  </div>
+  <div class="comp-card after">
+    <h4>TO-BE (변경 후)</h4>
+    <ul>
+      <li>모든 User가 업로드 가능 (오픈 UGC)</li>
+      <li>콘텐츠 → 채널 소속 (channel_id FK)</li>
+      <li>User → 채널 소유자 = 크리에이터</li>
+      <li>카탈로그(넷플릭스) + 채널 페이지(유튜브) 공존</li>
+      <li>채널 구독(팔로우) 시스템</li>
+      <li>기존 콘텐츠 → 공식 채널 마이그레이션</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== CONTENT FLOW ==================== -->
+<h2>3. Content Upload Flow</h2>
+
+<div class="flow-container">
+  <h3>크리에이터 업로드 플로우 (초기)</h3>
+  <div class="flow-row">
+    <div class="flow-box user">크리에이터<br>업로드 요청</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box system">채널 확인<br>(없으면 자동생성)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box data">Content 생성<br>channel_id 매핑</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box system">S3 업로드<br>+ 트랜스코딩</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box system">자동 PUBLISHED</div>
+  </div>
+
+  <h3 style="margin-top:32px;">향후 검수 플로우 (확장 예정)</h3>
+  <div class="flow-row">
+    <div class="flow-box data">트랜스코딩 완료</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box admin" style="opacity:0.5;">PENDING_REVIEW</div>
+    <span class="flow-arrow" style="opacity:0.5;">→</span>
+    <div class="flow-box admin" style="opacity:0.5;">운영진 검수<br>or 자동 검수</div>
+    <span class="flow-arrow" style="opacity:0.5;">→</span>
+    <div class="flow-box system" style="opacity:0.5;">PUBLISHED<br>or REJECTED</div>
+  </div>
+</div>
+
+<!-- ==================== DUAL VIEW ==================== -->
+<h2>4. Dual View System — Netflix + YouTube</h2>
+
+<div class="flow-container">
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+    <div style="background:#1a237e22; padding:20px; border-radius:8px; border:1px solid #304ffe44;">
+      <div style="color:#82b1ff; font-weight:700; font-size:15px; margin-bottom:12px;">Netflix View (홈/카탈로그)</div>
+      <div style="font-size:13px; color:#ccc; line-height:2;">
+        /api/app/feed — 큐레이션 피드<br>
+        /api/app/catalog/browse — 카테고리별 탐색<br>
+        /api/app/catalog/search — 통합 검색<br><br>
+        <span style="color:#888;">채널 무관, 모든 PUBLISHED 콘텐츠 대상<br>
+        운영진 피처드 + 알고리즘 추천<br>
+        기존 API 그대로 유지 (하위호환)</span>
+      </div>
+    </div>
+    <div style="background:#4a148c22; padding:20px; border-radius:8px; border:1px solid #6a1b9a44;">
+      <div style="color:#ce93d8; font-weight:700; font-size:15px; margin-bottom:12px;">YouTube View (채널 페이지)</div>
+      <div style="font-size:13px; color:#ccc; line-height:2;">
+        /api/app/channels/{handle} — 채널 프로필<br>
+        /api/app/channels/{handle}/contents — 채널 콘텐츠<br>
+        /api/app/channels/{handle}/series — 채널 시리즈<br><br>
+        <span style="color:#888;">채널 소속 콘텐츠만 표시<br>
+        크리에이터 브랜딩 (배너, 프로필)<br>
+        구독/구독자 수 표시</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== API DESIGN ==================== -->
+<h2>5. New API Endpoints</h2>
+
+<div class="api-group">
+  <h3>Creator APIs — /api/app/creator (JWT 필수)</h3>
+  <div class="api-row"><span class="method get">GET</span><span class="api-path">/api/app/creator/channel</span><span class="api-desc">내 채널 정보 조회</span></div>
+  <div class="api-row"><span class="method put">PUT</span><span class="api-path">/api/app/creator/channel</span><span class="api-desc">채널 정보 수정 (이름, 설명, 이미지)</span></div>
+  <div class="api-row"><span class="method post">POST</span><span class="api-path">/api/app/creator/contents</span><span class="api-desc">콘텐츠 업로드 (multipart)</span></div>
+  <div class="api-row"><span class="method get">GET</span><span class="api-path">/api/app/creator/contents</span><span class="api-desc">내 콘텐츠 목록</span></div>
+  <div class="api-row"><span class="method put">PUT</span><span class="api-path">/api/app/creator/contents/{id}/metadata</span><span class="api-desc">메타데이터 수정</span></div>
+  <div class="api-row"><span class="method patch">PATCH</span><span class="api-path">/api/app/creator/contents/{id}/status</span><span class="api-desc">공개/비공개/삭제</span></div>
+  <div class="api-row"><span class="method delete">DELETE</span><span class="api-path">/api/app/creator/contents/{id}</span><span class="api-desc">콘텐츠 삭제</span></div>
+  <div class="api-row"><span class="method post">POST</span><span class="api-path">/api/app/creator/series</span><span class="api-desc">시리즈 생성</span></div>
+  <div class="api-row"><span class="method get">GET</span><span class="api-path">/api/app/creator/series</span><span class="api-desc">내 시리즈 목록</span></div>
+  <div class="api-row"><span class="method put">PUT</span><span class="api-path">/api/app/creator/series/{id}</span><span class="api-desc">시리즈 수정</span></div>
+</div>
+
+<div class="api-group">
+  <h3>Channel Public APIs — /api/app/channels (Public)</h3>
+  <div class="api-row"><span class="method get">GET</span><span class="api-path">/api/app/channels/{handle}</span><span class="api-desc">채널 페이지 조회</span></div>
+  <div class="api-row"><span class="method get">GET</span><span class="api-path">/api/app/channels/{handle}/contents</span><span class="api-desc">채널 콘텐츠 목록 (페이징)</span></div>
+  <div class="api-row"><span class="method get">GET</span><span class="api-path">/api/app/channels/{handle}/series</span><span class="api-desc">채널 시리즈 목록</span></div>
+  <div class="api-row"><span class="method post">POST</span><span class="api-path">/api/app/channels/{handle}/subscribe</span><span class="api-desc">채널 구독 (JWT)</span></div>
+  <div class="api-row"><span class="method delete">DELETE</span><span class="api-path">/api/app/channels/{handle}/subscribe</span><span class="api-desc">구독 해제 (JWT)</span></div>
+  <div class="api-row"><span class="method get">GET</span><span class="api-path">/api/app/me/subscriptions</span><span class="api-desc">내 구독 채널 목록 (JWT)</span></div>
+</div>
+
+<div class="api-group">
+  <h3>Admin Channel APIs — /api/admin/channels (Admin JWT)</h3>
+  <div class="api-row"><span class="method get">GET</span><span class="api-path">/api/admin/channels</span><span class="api-desc">전체 채널 목록</span></div>
+  <div class="api-row"><span class="method patch">PATCH</span><span class="api-path">/api/admin/channels/{id}/status</span><span class="api-desc">채널 정지/활성화</span></div>
+</div>
+
+<!-- ==================== ARCHITECTURE ==================== -->
+<h2>6. Hexagonal Architecture — New Components</h2>
+
+<div class="flow-container">
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+    <div style="background:#2d1f4e; padding:16px; border-radius:8px; border:1px solid #bb86fc44;">
+      <div style="color:#bb86fc; font-weight:700; margin-bottom:12px;">IN (Web Adapters)</div>
+      <div style="font-size:12px; color:#ccc; line-height:2;">
+        CreatorContentController<br>
+        CreatorChannelController<br>
+        CreatorSeriesController<br>
+        ChannelPublicController<br>
+        ChannelSubscriptionController<br>
+        AdminChannelController
+      </div>
+    </div>
+    <div style="background:#1b3a1b; padding:16px; border-radius:8px; border:1px solid #69f0ae44;">
+      <div style="color:#69f0ae; font-weight:700; margin-bottom:12px;">APPLICATION (Use Cases & Services)</div>
+      <div style="font-size:12px; color:#ccc; line-height:2;">
+        CreatorUploadService<br>
+        CreatorContentService<br>
+        CreatorSeriesService<br>
+        ChannelService<br>
+        ChannelSubscriptionService<br>
+        AdminChannelService
+      </div>
+    </div>
+    <div style="background:#1a2744; padding:16px; border-radius:8px; border:1px solid #82b1ff44;">
+      <div style="color:#82b1ff; font-weight:700; margin-bottom:12px;">OUT (Persistence)</div>
+      <div style="font-size:12px; color:#ccc; line-height:2;">
+        ChannelJpaEntity<br>
+        ChannelI18nJpaEntity<br>
+        ChannelSubscriptionJpaEntity<br>
+        ChannelJpaRepository<br>
+        ChannelSubscriptionJpaRepository<br>
+        ChannelPersistenceAdapter
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <strong>기존 코드 영향 최소화:</strong><br>
+  기존 Admin API, Feed, Catalog, Playback, Watch Analytics 등은 그대로 유지됩니다.<br>
+  content 테이블에 channel_id만 추가되고, 기존 쿼리는 channel_id 무관하게 동작합니다.
+</div>
+
+<!-- ==================== MIGRATION ==================== -->
+<h2>7. DB Migration Strategy (V16)</h2>
+
+<div class="flow-container">
+  <div style="font-size:13px; line-height:2.2;">
+    <span style="color:#03dac6; font-weight:700;">Step 1.</span> channel, channel_i18n, channel_subscription 테이블 생성<br>
+    <span style="color:#03dac6; font-weight:700;">Step 2.</span> content 테이블에 channel_id 컬럼 추가 (nullable)<br>
+    <span style="color:#03dac6; font-weight:700;">Step 3.</span> series 테이블에 channel_id 컬럼 추가 (nullable)<br>
+    <span style="color:#03dac6; font-weight:700;">Step 4.</span> "AI OTT Official" 시스템 채널 생성 (is_official=true, owner_id=NULL)<br>
+    <span style="color:#03dac6; font-weight:700;">Step 5.</span> 기존 content/series의 channel_id → 공식 채널 ID로 UPDATE<br>
+    <span style="color:#03dac6; font-weight:700;">Step 6.</span> channel_id에 NOT NULL 제약조건 추가<br>
+    <span style="color:#03dac6; font-weight:700;">Step 7.</span> 인덱스 생성 (channel.handle, channel.owner_id, content.channel_id, series.channel_id)
+  </div>
+</div>
+
+<!-- ==================== FUTURE ==================== -->
+<h2>8. Future Extensibility (설계만, 구현 안함)</h2>
+
+<div class="flow-container">
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    <div style="background:#26323844; padding:16px; border-radius:8px; border:1px dashed #555;">
+      <div style="color:#80cbc4; font-weight:600; margin-bottom:8px;">Playlist / Collection</div>
+      <div style="font-size:12px; color:#888;">channel_playlist, playlist_item 테이블<br>채널 내 콘텐츠 큐레이션</div>
+    </div>
+    <div style="background:#26323844; padding:16px; border-radius:8px; border:1px dashed #555;">
+      <div style="color:#80cbc4; font-weight:600; margin-bottom:8px;">Community Tab</div>
+      <div style="font-size:12px; color:#888;">channel_post 테이블<br>텍스트/이미지 포스트, 댓글</div>
+    </div>
+    <div style="background:#26323844; padding:16px; border-radius:8px; border:1px dashed #555;">
+      <div style="color:#80cbc4; font-weight:600; margin-bottom:8px;">Content Review Gate</div>
+      <div style="font-size:12px; color:#888;">PENDING_REVIEW 상태 활성화<br>자동검수 + 운영진 검수 파이프라인</div>
+    </div>
+    <div style="background:#26323844; padding:16px; border-radius:8px; border:1px dashed #555;">
+      <div style="color:#80cbc4; font-weight:600; margin-bottom:8px;">Creator Approval System</div>
+      <div style="font-size:12px; color:#888;">업로드 권한 승인제 전환<br>channel.status로 게이팅</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

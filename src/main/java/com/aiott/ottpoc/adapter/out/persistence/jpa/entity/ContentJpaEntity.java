@@ -44,4 +44,8 @@ public class ContentJpaEntity {
 
     @Column(name="source_relation")
     private String sourceRelation;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "channel_id")
+    private ChannelJpaEntity channel;
 }

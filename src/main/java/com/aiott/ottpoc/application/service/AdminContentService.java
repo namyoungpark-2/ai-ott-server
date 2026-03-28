@@ -7,6 +7,7 @@ import com.aiott.ottpoc.application.port.in.AdminContentUseCase;
 import com.aiott.ottpoc.application.port.in.TranscodeVideoAssetUseCase;
 import com.aiott.ottpoc.application.port.out.AssetStoragePort;
 import com.aiott.ottpoc.application.port.out.CatalogCommandPort;
+import com.aiott.ottpoc.application.port.out.ChannelQueryPort;
 import com.aiott.ottpoc.application.port.out.MediaStoragePort;
 import com.aiott.ottpoc.application.port.out.VideoAssetCommandPort;
 import com.aiott.ottpoc.domain.model.VideoAssetStatus;
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class AdminContentService implements AdminContentUseCase {
 
     private final CatalogCommandPort catalogCommandPort;
+    private final ChannelQueryPort channelQueryPort;
     private final AssetStoragePort storagePort;
     private final MediaStoragePort mediaStoragePort;
     private final VideoAssetCommandPort videoAssetCommandPort;
@@ -34,6 +36,9 @@ public class AdminContentService implements AdminContentUseCase {
         String title = (cmd.title() == null || cmd.title().isBlank()) ? "Untitled" : cmd.title();
         String defaultLang = "en";
 
+        UUID officialChannelId = channelQueryPort.findOfficialChannelId()
+                .orElseThrow(() -> new IllegalStateException("Official channel not found"));
+
         UUID contentId;
 
         if ("EPISODE".equals(mode)) {
@@ -41,7 +46,7 @@ public class AdminContentService implements AdminContentUseCase {
             if (seriesId == null) {
                 String seriesTitle = (cmd.seriesTitle() == null || cmd.seriesTitle().isBlank())
                         ? "Untitled Series" : cmd.seriesTitle();
-                seriesId = catalogCommandPort.createSeries(seriesTitle, defaultLang);
+                seriesId = catalogCommandPort.createSeriesWithChannel(seriesTitle, defaultLang, officialChannelId);
             }
 
             int seasonNumber = (cmd.seasonNumber() == null ? 1 : cmd.seasonNumber());
@@ -53,7 +58,7 @@ public class AdminContentService implements AdminContentUseCase {
 
             contentId = catalogCommandPort.createEpisodeContent(seriesId, seasonId, episodeNumber, title);
         } else {
-            contentId = catalogCommandPort.createMovieContent(title);
+            contentId = catalogCommandPort.createMovieContentWithChannel(title, officialChannelId);
         }
 
         return new AdminCreateContentResult(contentId);

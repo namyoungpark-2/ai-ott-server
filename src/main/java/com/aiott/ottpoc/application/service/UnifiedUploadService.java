@@ -3,6 +3,7 @@ package com.aiott.ottpoc.application.service;
 import com.aiott.ottpoc.application.port.in.UnifiedUploadUseCase;
 import com.aiott.ottpoc.application.port.in.TranscodeVideoAssetUseCase;
 import com.aiott.ottpoc.application.port.out.CatalogCommandPort;
+import com.aiott.ottpoc.application.port.out.ChannelQueryPort;
 import com.aiott.ottpoc.application.port.out.AssetStoragePort;
 import com.aiott.ottpoc.application.port.out.MediaStoragePort;
 import com.aiott.ottpoc.application.port.out.VideoAssetCommandPort;
@@ -20,6 +21,7 @@ import com.aiott.ottpoc.domain.model.VideoAssetStatus;
 public class UnifiedUploadService implements UnifiedUploadUseCase {
 
     private final CatalogCommandPort catalogCommandPort;
+    private final ChannelQueryPort channelQueryPort;
     private final AssetStoragePort storagePort;
     private final MediaStoragePort mediaStoragePort;
     private final VideoAssetCommandPort videoAssetCommandPort;
@@ -31,6 +33,9 @@ public class UnifiedUploadService implements UnifiedUploadUseCase {
             UUID contentId = cmd.contentId();
 
             if (contentId == null) {
+                UUID officialChannelId = channelQueryPort.findOfficialChannelId()
+                        .orElseThrow(() -> new IllegalStateException("Official channel not found"));
+
                 String mode = (cmd.mode() == null ? "MOVIE" : cmd.mode().toUpperCase());
                 String title = (cmd.title() == null || cmd.title().isBlank()) ? "Untitled" : cmd.title();
                 String defaultLang = "en";
@@ -40,7 +45,7 @@ public class UnifiedUploadService implements UnifiedUploadUseCase {
                     if (seriesId == null) {
                         String seriesTitle = (cmd.seriesTitle() == null || cmd.seriesTitle().isBlank())
                                 ? "Untitled Series" : cmd.seriesTitle();
-                        seriesId = catalogCommandPort.createSeries(seriesTitle, defaultLang);
+                        seriesId = catalogCommandPort.createSeriesWithChannel(seriesTitle, defaultLang, officialChannelId);
                     }
 
                     int seasonNumber = (cmd.seasonNumber() == null ? 1 : cmd.seasonNumber());
@@ -53,7 +58,7 @@ public class UnifiedUploadService implements UnifiedUploadUseCase {
                     contentId = catalogCommandPort.createEpisodeContent(seriesId, seasonId, episodeNumber, title);
 
                 } else {
-                    contentId = catalogCommandPort.createMovieContent(title);
+                    contentId = catalogCommandPort.createMovieContentWithChannel(title, officialChannelId);
                 }
             }
 

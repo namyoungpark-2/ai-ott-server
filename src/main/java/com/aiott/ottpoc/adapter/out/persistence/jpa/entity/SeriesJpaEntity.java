@@ -26,4 +26,8 @@ public class SeriesJpaEntity {
 
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "channel_id")
+    private ChannelJpaEntity channel;
 }

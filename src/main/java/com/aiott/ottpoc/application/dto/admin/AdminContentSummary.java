@@ -21,5 +21,8 @@ public record AdminContentSummary(
         String streamUrl,
 
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+
+        String channelHandle,
+        String channelName
 ) {}

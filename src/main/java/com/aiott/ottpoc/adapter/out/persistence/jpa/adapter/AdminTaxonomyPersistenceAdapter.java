@@ -2,6 +2,7 @@ package com.aiott.ottpoc.adapter.out.persistence.jpa.adapter;
 
 import com.aiott.ottpoc.application.dto.admin.AdminCategoryResult;
 import com.aiott.ottpoc.application.dto.admin.AdminCreateCategoryCommand;
+import com.aiott.ottpoc.application.dto.admin.AdminUpdateCategoryCommand;
 import com.aiott.ottpoc.application.dto.admin.AdminUpdateContentMetadataCommand;
 import com.aiott.ottpoc.application.dto.admin.AdminUpdateContentTaxonomyCommand;
 import com.aiott.ottpoc.application.port.out.AdminCategoryCommandPort;
@@ -64,6 +65,88 @@ public class AdminTaxonomyPersistenceAdapter
 
         return new AdminCategoryResult(id, slug, command.label(), command.description(), sortOrder, active,
                 command.iabCode(), tier, parentId);
+    }
+
+    @Override
+    public AdminCategoryResult update(String slug, AdminUpdateCategoryCommand command) {
+        // find existing category
+        @SuppressWarnings("unchecked")
+        List<Object[]> existing = em.createNativeQuery(
+                "select id, default_language from category where slug = :slug")
+                .setParameter("slug", slug)
+                .getResultList();
+        if (existing.isEmpty()) {
+            throw new IllegalArgumentException("Category not found: " + slug);
+        }
+        UUID id = (UUID) existing.get(0)[0];
+        String lang = (String) existing.get(0)[1];
+
+        // resolve parentId
+        UUID parentId = null;
+        if (command.parentSlug() != null && !command.parentSlug().isBlank()) {
+            @SuppressWarnings("unchecked")
+            var result = em.createNativeQuery("select id from category where slug = :slug")
+                    .setParameter("slug", command.parentSlug())
+                    .getResultList();
+            if (!result.isEmpty()) parentId = (UUID) result.get(0);
+        }
+
+        int sortOrder = command.sortOrder() == null ? 0 : command.sortOrder();
+        boolean active = command.active() == null || command.active();
+        int tier = command.tier() == null ? 1 : command.tier();
+
+        em.createNativeQuery("""
+            update category
+            set label = :label, description = :description, sort_order = :sortOrder,
+                is_active = :active, iab_code = :iabCode, tier = :tier,
+                parent_id = :parentId, updated_at = now()
+            where id = :id
+        """)
+                .setParameter("label", command.label())
+                .setParameter("description", command.description())
+                .setParameter("sortOrder", sortOrder)
+                .setParameter("active", active)
+                .setParameter("iabCode", command.iabCode())
+                .setParameter("tier", tier)
+                .setParameter("parentId", parentId)
+                .setParameter("id", id)
+                .executeUpdate();
+
+        // upsert i18n
+        em.createNativeQuery("""
+            insert into category_i18n (category_id, lang, label, description, created_at, updated_at)
+            values (:categoryId, :lang, :label, :description, now(), now())
+            on conflict (category_id, lang) do update
+                set label = excluded.label, description = excluded.description, updated_at = now()
+        """)
+                .setParameter("categoryId", id).setParameter("lang", lang)
+                .setParameter("label", command.label()).setParameter("description", command.description())
+                .executeUpdate();
+
+        return new AdminCategoryResult(id, slug, command.label(), command.description(),
+                sortOrder, active, command.iabCode(), tier, parentId);
+    }
+
+    @Override
+    public void delete(String slug) {
+        @SuppressWarnings("unchecked")
+        var result = em.createNativeQuery("select id from category where slug = :slug")
+                .setParameter("slug", slug)
+                .getResultList();
+        if (result.isEmpty()) {
+            throw new IllegalArgumentException("Category not found: " + slug);
+        }
+        UUID id = (UUID) result.get(0);
+
+        em.createNativeQuery("delete from content_category where category_id = :id")
+                .setParameter("id", id).executeUpdate();
+        em.createNativeQuery("delete from category_i18n where category_id = :id")
+                .setParameter("id", id).executeUpdate();
+        // 자식 카테고리의 parent_id를 null로 변경
+        em.createNativeQuery("update category set parent_id = null where parent_id = :id")
+                .setParameter("id", id).executeUpdate();
+        em.createNativeQuery("delete from category where id = :id")
+                .setParameter("id", id).executeUpdate();
     }
 
     @Override

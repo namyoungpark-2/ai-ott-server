@@ -38,8 +38,11 @@ public class ContentViewQueryAdapter implements ContentViewQueryPort {
             va.error_message,
             va.video_width,
             va.video_height,
-            va.duration_ms
+            va.duration_ms,
+            ch.handle as channel_handle,
+            ch.name as channel_name
           from content c
+          left join channel ch on ch.id = c.channel_id
           left join lateral (
             select ci1.title
             from content_i18n ci1
@@ -82,7 +85,9 @@ public class ContentViewQueryAdapter implements ContentViewQueryPort {
                 videoWidth,
                 videoHeight,
                 resolveOrientation(videoWidth, videoHeight),
-                durationMs
+                durationMs,
+                (String) r[9],
+                (String) r[10]
         );
     }
 

@@ -74,6 +74,66 @@ public class CatalogCommandAdapter implements CatalogCommandPort {
 
     @Override
     @Transactional
+    public UUID createMovieContentWithChannel(String title, UUID channelId) {
+        UUID id = UUID.randomUUID();
+
+        em.createNativeQuery("""
+          insert into content
+            (id, content_type, status, default_language, channel_id, created_at, updated_at)
+          values
+            (:id, 'MOVIE', 'DRAFT', 'en', :channelId, now(), now())
+        """)
+        .setParameter("id", id)
+        .setParameter("channelId", channelId)
+        .executeUpdate();
+
+        em.createNativeQuery("""
+          insert into content_i18n
+            (content_id, lang, title, description, created_at, updated_at)
+          values
+            (:id, 'en', :title, null, now(), now())
+          on conflict (content_id, lang) do nothing
+        """)
+        .setParameter("id", id)
+        .setParameter("title", title)
+        .executeUpdate();
+
+        return id;
+    }
+
+    @Override
+    @Transactional
+    public UUID createSeriesWithChannel(String title, String defaultLang, UUID channelId) {
+        UUID id = UUID.randomUUID();
+
+        em.createNativeQuery("""
+          insert into series
+            (id, status, default_language, channel_id, created_at, updated_at)
+          values
+            (:id, 'DRAFT', :defaultLang, :channelId, now(), now())
+        """)
+        .setParameter("id", id)
+        .setParameter("defaultLang", defaultLang)
+        .setParameter("channelId", channelId)
+        .executeUpdate();
+
+        em.createNativeQuery("""
+          insert into series_i18n
+            (series_id, lang, title, description, created_at, updated_at)
+          values
+            (:id, :lang, :title, null, now(), now())
+          on conflict (series_id, lang) do nothing
+        """)
+        .setParameter("id", id)
+        .setParameter("lang", defaultLang)
+        .setParameter("title", title)
+        .executeUpdate();
+
+        return id;
+    }
+
+    @Override
+    @Transactional
     public UUID ensureSeason(UUID seriesId, int seasonNumber, String defaultLang) {
         // 기존 시즌이 있는지 확인
         var existingSeasonId = (UUID) em.createNativeQuery("""
