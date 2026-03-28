@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.RequestPart;
 
 import java.util.List;
 import java.util.Map;
@@ -45,6 +47,12 @@ public class CreatorContentController {
     public Map<String, String> updateStatus(@PathVariable UUID id, @RequestParam String status) {
         useCase.updateContentStatus(getUserId(), id, status);
         return Map.of("message", "updated");
+    }
+
+    @PostMapping("/{id}/upload")
+    public Map<String, Object> upload(@PathVariable UUID id, @RequestPart("file") MultipartFile file) {
+        var result = useCase.uploadAsset(getUserId(), id, file);
+        return Map.of("contentId", result.contentId(), "videoAssetId", result.videoAssetId(), "status", result.status());
     }
 
     @DeleteMapping("/{id}")

@@ -302,16 +302,25 @@ Authorization: Bearer <user-jwt>
 
 ### 콘텐츠 업로드 플로우
 
-현재 비디오 파일 업로드는 기존 Admin API를 통해 처리됨. 크리에이터 전용 파일 업로드 API는 Task 8에서 통합 예정. 당장은:
-
 ```
 Step 1: POST /api/app/creator/contents → contentId 생성
-Step 2: POST /api/admin/contents/{contentId}/assets (file multipart)  ← 기존 Admin API 재사용
+Step 2: POST /api/app/creator/contents/{contentId}/upload (file multipart)
 Step 3: 트랜스코딩 자동 시작
 Step 4: videoAssetStatus가 READY로 바뀌면 재생 가능
 ```
 
-> **TODO:** 크리에이터 전용 파일 업로드 엔드포인트 (`POST /api/app/creator/contents/{id}/upload`) 추가 필요. 현재는 Admin asset API를 임시로 사용.
+```typescript
+// Step 2: 비디오 파일 업로드
+const formData = new FormData();
+formData.append('file', videoFile);
+
+POST /api/app/creator/contents/{contentId}/upload
+Authorization: Bearer <user-jwt>
+Content-Type: multipart/form-data
+
+// Response 200
+{ "contentId": "uuid", "videoAssetId": "uuid", "status": "PROCESSING" }
+```
 
 ### 크리에이터 스튜디오 UI 구성
 
@@ -460,8 +469,10 @@ PUT /api/app/creator/channel
 | # | 내용 | 상태 |
 |---|------|------|
 | ~~1~~ | ~~ContentViewResult에 channelHandle, channelName 추가~~ | ✅ 완료 |
-| 2 | 크리에이터 전용 비디오 업로드 API (`POST /api/app/creator/contents/{id}/upload`) | ⏳ TODO |
-| 3 | 피드 API 응답에 채널 정보 추가 | ⏳ TODO |
-| 4 | 채널 handle 변경 API | 낮음 |
-| 5 | 프로필/배너 이미지 업로드 API (또는 presigned URL) | 낮음 |
-| 6 | 구독 여부 확인 단일 API (`GET /api/app/channels/{handle}/subscription-status`) | 낮음 |
+| ~~2~~ | ~~크리에이터 전용 비디오 업로드 API (`POST /api/app/creator/contents/{id}/upload`)~~ | ✅ 완료 |
+| ~~3~~ | ~~피드 API 응답에 채널 정보 추가~~ | ✅ 완료 |
+| ~~4~~ | ~~채널 handle 변경 API (`PATCH /api/app/creator/channel/handle`)~~ | ✅ 완료 |
+| ~~5~~ | 프로필/배너 이미지 업로드 — 클라이언트에서 S3/R2 직접 업로드 후 URL 전달 방식 | 서버 불필요 |
+| ~~6~~ | ~~구독 여부 확인 API (`GET /api/app/channels/{handle}/subscription-status`)~~ | ✅ 완료 |
+
+서버 작업 전부 완료. 프론트엔드 연동만 진행하면 됨.

@@ -8,4 +8,5 @@ public interface ChannelCommandPort {
     void updateChannelStatus(UUID channelId, String status);
     void incrementSubscriberCount(UUID channelId);
     void decrementSubscriberCount(UUID channelId);
+    void updateChannelHandle(UUID channelId, String handle);
 }

@@ -1,15 +1,22 @@
 package com.aiott.ottpoc.application.service;
 
+import com.aiott.ottpoc.application.dto.admin.AdminAttachAssetResult;
 import com.aiott.ottpoc.application.dto.channel.CreatorContentResult;
 import com.aiott.ottpoc.application.dto.channel.CreatorContentSummary;
 import com.aiott.ottpoc.application.dto.channel.CreatorCreateContentCommand;
 import com.aiott.ottpoc.application.port.in.CreatorContentUseCase;
+import com.aiott.ottpoc.application.port.in.TranscodeVideoAssetUseCase;
+import com.aiott.ottpoc.application.port.out.AssetStoragePort;
 import com.aiott.ottpoc.application.port.out.CatalogCommandPort;
 import com.aiott.ottpoc.application.port.out.ChannelQueryPort;
+import com.aiott.ottpoc.application.port.out.MediaStoragePort;
+import com.aiott.ottpoc.application.port.out.VideoAssetCommandPort;
+import com.aiott.ottpoc.domain.model.VideoAssetStatus;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -22,6 +29,10 @@ public class CreatorContentService implements CreatorContentUseCase {
     private final CatalogCommandPort catalogCommandPort;
     private final ChannelQueryPort channelQueryPort;
     private final EntityManager em;
+    private final AssetStoragePort storagePort;
+    private final MediaStoragePort mediaStoragePort;
+    private final VideoAssetCommandPort videoAssetCommandPort;
+    private final TranscodeVideoAssetUseCase transcodeVideoAssetUseCase;
 
     @Override
     @Transactional
@@ -129,6 +140,22 @@ public class CreatorContentService implements CreatorContentUseCase {
         if (val instanceof java.time.Instant inst) return inst.atOffset(ZoneOffset.UTC);
         if (val instanceof java.sql.Timestamp ts) return ts.toInstant().atOffset(ZoneOffset.UTC);
         return null;
+    }
+
+    @Override
+    @Transactional
+    public AdminAttachAssetResult uploadAsset(String userId, UUID contentId, MultipartFile file) {
+        verifyOwnership(userId, contentId);
+        try {
+            var tempPath = storagePort.saveSourceVideo(file.getBytes(), file.getOriginalFilename());
+            var sourceKey = mediaStoragePort.storeSource(tempPath, contentId, file.getOriginalFilename());
+            var videoAssetId = videoAssetCommandPort.createVideoAsset(
+                    contentId, mediaStoragePort.storageType(), sourceKey, VideoAssetStatus.UPLOADED);
+            transcodeVideoAssetUseCase.transcode(videoAssetId, null);
+            return new AdminAttachAssetResult(contentId, videoAssetId, "PROCESSING");
+        } catch (Exception e) {
+            throw new RuntimeException("Upload failed", e);
+        }
     }
 
     private void verifyOwnership(String userId, UUID contentId) {

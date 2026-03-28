@@ -78,6 +78,15 @@ public class ChannelPersistenceAdapter implements ChannelCommandPort, ChannelQue
     }
 
     @Override
+    @Transactional
+    public void updateChannelHandle(UUID channelId, String handle) {
+        em.createNativeQuery("UPDATE channel SET handle = :handle, updated_at = now() WHERE id = :channelId")
+        .setParameter("channelId", channelId)
+        .setParameter("handle", handle)
+        .executeUpdate();
+    }
+
+    @Override
     public Optional<ChannelDetailResult> findByHandle(String handle, String lang) {
         @SuppressWarnings("unchecked")
         List<Object[]> rows = em.createNativeQuery("""

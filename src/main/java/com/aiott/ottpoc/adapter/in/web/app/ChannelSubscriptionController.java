@@ -28,6 +28,12 @@ public class ChannelSubscriptionController {
         return Map.of("message", "unsubscribed");
     }
 
+    @GetMapping("/api/app/channels/{handle}/subscription-status")
+    public Map<String, Boolean> subscriptionStatus(@PathVariable String handle) {
+        boolean subscribed = useCase.isSubscribed(getUserId(), handle);
+        return Map.of("subscribed", subscribed);
+    }
+
     @GetMapping("/api/app/me/subscriptions")
     public List<ChannelSummaryResult> mySubscriptions(@RequestParam(required = false) String lang) {
         return useCase.listMySubscriptions(getUserId(), LangResolver.resolve(lang));

@@ -933,9 +933,52 @@ Base path: `/api/app/creator/contents` | Auth: **User JWT**
 |-------------|------|----------|-------------|
 | `status` | string | Yes | PUBLISHED, UNLISTED, ARCHIVED |
 
+### POST /api/app/creator/contents/{id}/upload
+
+비디오 파일 업로드 (소유권 검증 후 트랜스코딩 자동 시작).
+
+```
+Content-Type: multipart/form-data
+Part: file (binary)
+```
+
+```json
+// Response 200
+{ "contentId": "uuid", "videoAssetId": "uuid", "status": "PROCESSING" }
+```
+
 ### DELETE /api/app/creator/contents/{id}
 
 콘텐츠 삭제 (ARCHIVED로 소프트 삭제).
+
+---
+
+## 25.5 Creator Channel — Handle
+
+### PATCH /api/app/creator/channel/handle
+
+채널 handle 변경.
+
+```json
+// Request
+{ "handle": "my-new-handle" }
+
+// Response 200
+{ "message": "handle updated", "handle": "my-new-handle" }
+```
+
+---
+
+## 29.5 Channel Subscription Status
+
+### GET /api/app/channels/{handle}/subscription-status
+
+구독 여부 확인 (JWT 필수).
+
+```json
+// Response 200
+{ "subscribed": true }
+```
 
 ---
 

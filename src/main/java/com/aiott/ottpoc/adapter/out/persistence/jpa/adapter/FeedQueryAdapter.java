@@ -35,8 +35,11 @@ public class FeedQueryAdapter implements FeedQueryPort {
             case when c.content_type = 'EPISODE' then 'SERIES' else 'STANDALONE' end as kind,
             c.series_id as series_id,
             c.season_id as season_id,
-            c.episode_number as episode_number
+            c.episode_number as episode_number,
+            ch.handle as channel_handle,
+            ch.name as channel_name
           from content c
+          left join channel ch on ch.id = c.channel_id
           left join lateral (
             select ci1.title
             from content_i18n ci1
@@ -76,7 +79,9 @@ public class FeedQueryAdapter implements FeedQueryPort {
                 (String) r[5],
                 (UUID) r[6],
                 (UUID) r[7],
-                r[8] == null ? null : ((Number) r[8]).intValue()
+                r[8] == null ? null : ((Number) r[8]).intValue(),
+                (String) r[9],
+                (String) r[10]
         )).toList();
     }
 }

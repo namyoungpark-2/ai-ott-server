@@ -6,4 +6,5 @@ import com.aiott.ottpoc.application.dto.channel.UpdateChannelCommand;
 public interface CreatorChannelUseCase {
     ChannelDetailResult getOrCreateMyChannel(String userId, String lang);
     ChannelDetailResult updateMyChannel(String userId, UpdateChannelCommand cmd);
+    void updateMyHandle(String userId, String newHandle);
 }

@@ -5,6 +5,8 @@ import com.aiott.ottpoc.application.dto.channel.ChannelDetailResult;
 import com.aiott.ottpoc.application.dto.channel.UpdateChannelCommand;
 import com.aiott.ottpoc.application.port.in.CreatorChannelUseCase;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +25,16 @@ public class CreatorChannelController {
     @PutMapping
     public ChannelDetailResult updateMyChannel(@RequestBody UpdateChannelCommand cmd) {
         return useCase.updateMyChannel(getUserId(), cmd);
+    }
+
+    @PatchMapping("/handle")
+    public Map<String, String> updateHandle(@RequestBody Map<String, String> body) {
+        String newHandle = body.get("handle");
+        if (newHandle == null || newHandle.isBlank()) {
+            throw new IllegalArgumentException("handle is required");
+        }
+        useCase.updateMyHandle(getUserId(), newHandle);
+        return Map.of("message", "handle updated", "handle", newHandle);
     }
 
     private String getUserId() {

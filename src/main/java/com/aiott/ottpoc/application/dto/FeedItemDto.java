@@ -13,5 +13,8 @@ public record FeedItemDto(
 
         UUID seriesId,           // EPISODE일 때만
         UUID seasonId,           // EPISODE일 때만
-        Integer episodeNumber    // EPISODE일 때만
+        Integer episodeNumber,   // EPISODE일 때만
+
+        String channelHandle,
+        String channelName
 ) {}

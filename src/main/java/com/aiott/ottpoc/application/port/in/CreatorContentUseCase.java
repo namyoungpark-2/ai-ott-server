@@ -1,8 +1,10 @@
 package com.aiott.ottpoc.application.port.in;
 
+import com.aiott.ottpoc.application.dto.admin.AdminAttachAssetResult;
 import com.aiott.ottpoc.application.dto.channel.CreatorContentResult;
 import com.aiott.ottpoc.application.dto.channel.CreatorCreateContentCommand;
 import com.aiott.ottpoc.application.dto.channel.CreatorContentSummary;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -13,4 +15,5 @@ public interface CreatorContentUseCase {
     void updateContentMetadata(String userId, UUID contentId, String title, String description, String lang);
     void updateContentStatus(String userId, UUID contentId, String status);
     void deleteContent(String userId, UUID contentId);
+    AdminAttachAssetResult uploadAsset(String userId, UUID contentId, MultipartFile file);
 }
