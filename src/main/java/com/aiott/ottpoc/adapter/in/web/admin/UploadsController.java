@@ -7,10 +7,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/uploads")
+@PreAuthorize("hasRole('ADMIN')")
 public class UploadsController {
 
     private final UnifiedUploadUseCase unifiedUploadUseCase;

@@ -6,10 +6,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/video-assets")
+@PreAuthorize("hasRole('ADMIN')")
 public class TranscodingController {
 
     private final TranscodeVideoAssetUseCase transcodeVideoAssetUseCase;

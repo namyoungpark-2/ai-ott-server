@@ -31,16 +31,19 @@ public class AuthController {
     @Value("${app.mail.enabled:false}")
     private boolean mailEnabled;
 
-    @Value("${ADMIN_USERNAME:admin}")
+    // 기본값을 두지 않는다. 예전에는 admin/admin, ops/ops 가 기본값이어서
+    // 환경변수를 넣지 않고 배포하면 어드민이 그대로 열렸다.
+    // 지금은 미설정 시 기동 자체가 실패한다(security.jwt.secret 과 같은 방식).
+    @Value("${ADMIN_USERNAME}")
     private String adminUsername;
 
-    @Value("${ADMIN_PASSWORD:admin}")
+    @Value("${ADMIN_PASSWORD}")
     private String adminPassword;
 
-    @Value("${OPS_USERNAME:ops}")
+    @Value("${OPS_USERNAME}")
     private String opsUsername;
 
-    @Value("${OPS_PASSWORD:ops}")
+    @Value("${OPS_PASSWORD}")
     private String opsPassword;
 
     public AuthController(JwtTokenProvider tokens, UserAuthPort users, EmailService emailService) {
@@ -213,15 +216,17 @@ public class AuthController {
      * SameSite=Lax는 CSRF를 방지하면서 일반 링크 클릭 이동은 허용.
      */
     private void setAuthCookie(HttpServletResponse response, String jwt) {
+        // Set-Cookie 를 한 번만 보낸다.
+        // 이전 구현은 addCookie() 와 addHeader() 를 모두 호출해 같은 쿠키를 두 번
+        // 내려보냈고, 그중 addCookie() 쪽에는 SameSite 가 빠져 있었다.
+        // CSRF 방어가 SameSite 에만 의존하는 구조(csrf disable)라서 중요하다.
         Cookie cookie = new Cookie("auth_token", jwt);
         cookie.setHttpOnly(true);
         cookie.setSecure(true);          // HTTPS 전용 (운영환경)
         cookie.setPath("/");
         cookie.setMaxAge(60 * 60 * 24); // 24시간
+        cookie.setAttribute("SameSite", "Lax");
         response.addCookie(cookie);
-        // SameSite는 Cookie API가 지원하지 않아 헤더로 직접 추가
-        response.addHeader("Set-Cookie",
-                "auth_token=" + jwt + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=86400");
     }
 
     private void clearAuthCookie(HttpServletResponse response) {

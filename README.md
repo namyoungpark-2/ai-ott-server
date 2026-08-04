@@ -6,13 +6,13 @@ Spring Boot backend for the AI OTT streaming platform.
 
 | Layer | Technology |
 |-------|-----------|
-| Language | Java 24 |
+| Language | Java 21 |
 | Framework | Spring Boot 4.0.2 |
 | Database | PostgreSQL (Flyway migrations) |
 | Auth | JWT (HS256, hand-rolled) + Spring Security |
 | Storage | Local filesystem or Cloudflare R2 (S3-compatible) |
 | Video | FFmpeg (HLS transcoding) |
-| Deploy | Render (Docker) |
+| Deploy | Oracle Cloud VM (Docker Compose) — see [docs/infra/production-deployment.md](docs/infra/production-deployment.md) |
 
 ---
 
@@ -20,7 +20,7 @@ Spring Boot backend for the AI OTT streaming platform.
 
 ### Prerequisites
 
-- Java 24+
+- Java 21+
 - Docker (for PostgreSQL) or a local PostgreSQL instance
 - FFmpeg installed and on `PATH`
 
@@ -32,7 +32,7 @@ cd ai-ott-server
 ```
 
 Create a local `.env` or set environment variables (see [Environment Variables](#environment-variables)).
-The app has sensible defaults for local dev — a PostgreSQL instance is expected at the default Render internal hostname, so override `DB_URL` for local:
+필수 환경변수는 기본값이 없다(누락 시 기동 실패). 로컬에서도 아래 값을 설정해야 한다:
 
 ```bash
 export DB_URL=jdbc:postgresql://localhost:5432/aiott
@@ -141,7 +141,7 @@ Flyway manages the schema under `src/main/resources/db/migration/`.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | Server port |
-| `DB_URL` | Render internal URL | JDBC URL |
+| `DB_URL` | (없음) | JDBC URL — compose 가 주입 |
 | `DB_USERNAME` | `aiott` | DB username |
 | `DB_PASSWORD` | `aiott_pw` | DB password |
 | `JWT_SECRET` | `CHANGE_ME_...` | HS256 signing secret — **change in production** |
@@ -158,49 +158,23 @@ Flyway manages the schema under `src/main/resources/db/migration/`.
 
 ---
 
-## Deployment (Render)
+## Deployment
 
-The project ships with `Dockerfile.render` for Render's Docker runtime.
+배포는 Oracle Cloud Always Free VM 에서 Docker Compose 로 운영한다.
+전체 설계·순서·검증 절차는 **[docs/infra/production-deployment.md](docs/infra/production-deployment.md)** 를 참고한다.
 
-### Steps
+```bash
+# VM 에서
+git clone https://github.com/namyoungpark-2/ai-ott-server.git
+cd ai-ott-server/infra
+./setup.sh              # docker 설치, 방화벽, 백업 크론 (멱등)
+cp .env.example .env    # 값 채우기 — 필수 6개가 비면 setup.sh 가 중단시킨다
+docker compose up -d --build
+```
 
-1. **Create a Render Web Service**
-   - Environment: **Docker**
-   - Dockerfile path: `Dockerfile.render`
-   - Instance type: Free (512 MB RAM)
-
-2. **Create a Render PostgreSQL** database and link it, or set `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` manually.
-
-3. **Set environment variables** in Render → Environment:
-
-   ```
-   JWT_SECRET=<long-random-secret>
-   CORS_ALLOWED_ORIGINS=https://<your-frontend>.workers.dev
-   DB_URL=<render-internal-postgres-url>
-   DB_USERNAME=<db-user>
-   DB_PASSWORD=<db-password>
-   ```
-
-   For R2 storage, also set:
-   ```
-   STORAGE_TYPE=r2
-   R2_ACCOUNT_ID=...
-   R2_ACCESS_KEY_ID=...
-   R2_SECRET_ACCESS_KEY=...
-   R2_BUCKET=...
-   R2_PUBLIC_URL=...
-   ```
-
-4. **Deploy** — Render builds the Docker image and runs it. Flyway applies all migrations on startup.
-
-5. **Health check** — Render pings `/` (returns 200 OK).
-
-### Free plan notes
-
-- The service spins down after 15 minutes of inactivity (cold start ~30s).
-- RAM limit is 512 MB — JVM flags in `Dockerfile.render` are tuned accordingly.
-
----
+이전에는 `Dockerfile.render` 로 Render 배포를 계획했으나 실제로 배포된 적이 없고,
+`build.gradle` 의 toolchain(21)과 이미지의 JDK(24)가 어긋나 있었다.
+`infra/Dockerfile` 로 대체하고 삭제했다.
 
 ## Architecture
 

@@ -12,6 +12,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/video-assets")
+@PreAuthorize("hasRole('ADMIN')")
 public class TranscodingRetryController {
 
     private final RetryTranscodingUseCase useCase;

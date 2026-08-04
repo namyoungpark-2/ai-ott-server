@@ -36,3 +36,11 @@ out/
 ### VS Code ###
 .vscode/
 data/
+
+### 배포 시크릿 — 절대 커밋하지 않는다 ###
+# 실제 값이 담긴 .env (템플릿인 .env.example 은 커밋한다)
+infra/.env
+# Cloudflare Origin CA 인증서와 개인키
+infra/certs/
+# 로컬 검증용 임시 파일
+infra/.verify/

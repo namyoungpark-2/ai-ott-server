@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/ops/transcoding")
+@PreAuthorize("hasRole('SRE')")
 public class OpsTranscodingController {
 
     private final OpsTranscodingUseCase useCase;
