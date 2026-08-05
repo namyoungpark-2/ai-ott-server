@@ -25,6 +25,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/contents")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminContentController {
 
     private final AdminContentUseCase useCase;

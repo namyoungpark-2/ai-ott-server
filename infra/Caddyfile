@@ -1,0 +1,48 @@
+# Cloudflare 프록시(주황색 구름) 뒤에서 동작하는 전제로 작성했다.
+#
+# CF 프록시를 켜면 Let's Encrypt HTTP-01 검증이 막히므로 자동 발급을 쓰지 않고
+# Cloudflare Origin CA 인증서(무료, 15년)를 직접 넣는다.
+# CF 대시보드의 SSL/TLS 모드는 반드시 "Full (strict)" 로 둔다.
+{
+	# 관리 API 는 쓰지 않는다.
+	admin off
+	# 인증서를 직접 넣으므로 ACME 계정 이메일이 필요 없다.
+	auto_https disable_redirects
+}
+
+api.aiott.kr {
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+
+	encode zstd gzip
+
+	# 업로드 본문 상한. application.yml 의 multipart 상한(1024MB)보다 약간 크게 잡아
+	# 멀티파트 오버헤드까지 통과시킨다.
+	request_body {
+		max_size 1100MB
+	}
+
+	reverse_proxy app:8080 {
+		# 실제 클라이언트 IP 를 CF 헤더에서 받아 전달한다.
+		# 서버의 RateLimitingFilter 는 CF-Connecting-IP 를 우선 사용한다.
+		header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+
+		# 대용량 업로드와 트랜스코딩 응답을 고려한 타임아웃.
+		transport http {
+			read_timeout 600s
+			write_timeout 600s
+		}
+	}
+
+	# 디스크를 아끼기 위해 회전 설정만 둔다. 무료 VM 이라 로그가 쌓이면 곤란하다.
+	log {
+		output file /data/access.log {
+			roll_size 10MB
+			roll_keep 3
+		}
+	}
+}
+
+# 도메인이 아닌 IP 로 직접 들어오는 요청은 어떤 사이트에도 매칭되지 않아 거부된다.
+# 더 강하게 막으려면 Oracle 보안 목록에서 80/443 인그레스를 Cloudflare IP 대역으로
+# 제한한다(docs/infra/production-deployment.md 참고).

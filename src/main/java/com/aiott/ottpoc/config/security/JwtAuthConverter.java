@@ -8,6 +8,7 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationToken> {
@@ -32,8 +33,11 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
     private void enforceAudience(Jwt jwt) {
         List<String> aud = jwt.getAudience();
         if (aud == null || aud.isEmpty() || !aud.contains(requiredAud)) {
-            // aud가 안 맞으면 해당 체인(admin/ops/app) 접근 금지
-            throw new IllegalArgumentException("Invalid aud. required=" + requiredAud + ", actual=" + aud);
+            // aud가 안 맞으면 해당 체인(admin/ops/app) 접근 금지.
+            // InvalidBearerTokenException 이어야 401 로 내려간다.
+            // IllegalArgumentException 을 던지면 500 이 되어 인증 실패가 서버 오류로 보인다.
+            throw new InvalidBearerTokenException(
+                    "Invalid aud. required=" + requiredAud + ", actual=" + aud);
         }
     }
 

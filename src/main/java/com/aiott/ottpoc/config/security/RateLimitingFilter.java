@@ -48,26 +48,34 @@ public class RateLimitingFilter implements Filter {
         String path = req.getRequestURI();
         String method = req.getMethod();
 
-        if (!"POST".equalsIgnoreCase(method) || !path.startsWith("/auth/")) {
+        String action = resolveAuthAction(path);
+
+        if (!"POST".equalsIgnoreCase(method) || action == null) {
             chain.doFilter(request, response);
             return;
         }
 
         String ip = resolveClientIp(req);
+        String key = ip + "|" + action;
 
-        if (path.equals("/auth/login") && isRateLimited(loginBuckets, ip, LOGIN_LIMIT)) {
-            log.warn("[RATE LIMIT] Login blocked for IP={}", ip);
+        // admin/ops 로그인도 포함한다 — 브루트포스 대상으로는 오히려 이쪽이 가치가 높다.
+        boolean isLogin = action.equals("login")
+                || action.equals("admin/login")
+                || action.equals("ops/login");
+
+        if (isLogin && isRateLimited(loginBuckets, key, LOGIN_LIMIT)) {
+            log.warn("[RATE LIMIT] Login blocked for IP={} action={}", ip, action);
             sendTooManyRequests(res, "Too many login attempts. Please wait 1 minute.");
             return;
         }
 
-        if (path.equals("/auth/signup") && isRateLimited(signupBuckets, ip, SIGNUP_LIMIT)) {
+        if (action.equals("signup") && isRateLimited(signupBuckets, key, SIGNUP_LIMIT)) {
             log.warn("[RATE LIMIT] Signup blocked for IP={}", ip);
             sendTooManyRequests(res, "Too many signup attempts. Please wait 1 minute.");
             return;
         }
 
-        if (path.equals("/auth/forgot-password") && isRateLimited(forgotBuckets, ip, FORGOT_LIMIT)) {
+        if (action.equals("forgot-password") && isRateLimited(forgotBuckets, key, FORGOT_LIMIT)) {
             log.warn("[RATE LIMIT] Forgot-password blocked for IP={}", ip);
             sendTooManyRequests(res, "Too many password reset attempts. Please wait 1 minute.");
             return;
@@ -76,9 +84,25 @@ public class RateLimitingFilter implements Filter {
         chain.doFilter(request, response);
     }
 
-    private boolean isRateLimited(Map<String, WindowEntry> buckets, String ip, int limit) {
+    /**
+     * AuthController 는 {@code {"/auth", "/api/app/auth"}} 두 경로에 동시 매핑돼 있다.
+     * 한쪽만 검사하면 다른 경로로 제한을 그대로 우회할 수 있으므로 액션명으로 정규화한다.
+     *
+     * @return 액션명(예: {@code "login"}), 인증 경로가 아니면 {@code null}
+     */
+    private static String resolveAuthAction(String path) {
+        if (path.startsWith("/auth/")) {
+            return path.substring("/auth/".length());
+        }
+        if (path.startsWith("/api/app/auth/")) {
+            return path.substring("/api/app/auth/".length());
+        }
+        return null;
+    }
+
+    private boolean isRateLimited(Map<String, WindowEntry> buckets, String key, int limit) {
         long now = Instant.now().getEpochSecond();
-        WindowEntry entry = buckets.compute(ip, (k, existing) -> {
+        WindowEntry entry = buckets.compute(key, (k, existing) -> {
             if (existing == null || (now - existing.windowStart) >= WINDOW_SECONDS) {
                 return new WindowEntry(new AtomicInteger(1), now);
             }
@@ -89,14 +113,19 @@ public class RateLimitingFilter implements Filter {
     }
 
     private String resolveClientIp(HttpServletRequest req) {
-        // Render, Cloudflare 등 프록시 뒤에서는 X-Forwarded-For 헤더를 사용
-        String xff = req.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
+        // CF-Connecting-IP 를 먼저 본다. Cloudflare 가 항상 실제 클라이언트 IP 로
+        // 덮어쓰기 때문에 위조할 수 없다.
+        //
+        // X-Forwarded-For 를 먼저 보면 안 된다. 맨 앞 값은 클라이언트가 보낸 헤더가
+        // 그대로 남아 있어, 요청마다 다른 값을 넣으면 IP별 버킷이 매번 새로 생기고
+        // 레이트리밋이 무력화된다.
         String cfIp = req.getHeader("CF-Connecting-IP");
         if (cfIp != null && !cfIp.isBlank()) {
             return cfIp.trim();
+        }
+        String xff = req.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
         }
         return req.getRemoteAddr();
     }

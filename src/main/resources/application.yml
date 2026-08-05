@@ -28,7 +28,9 @@ spring:
 
 
   main:
-    lazy-initialization: true
+    # false 여야 한다. true 면 빈이 지연 생성되어 JWT_SECRET / ADMIN_PASSWORD 같은
+    # 필수 설정 누락을 기동 시점에 못 잡고, 첫 로그인 요청에서야 500 으로 드러난다.
+    lazy-initialization: false
 
   servlet:
     multipart:
@@ -54,7 +56,9 @@ app:
     access-key-id: ${R2_ACCESS_KEY_ID:}
     secret-access-key: ${R2_SECRET_ACCESS_KEY:}
     bucket: ${R2_BUCKET:}
-    public-url: ${R2_PUBLIC_URL:}    # e.g. https://pub-xxxxxxxx.r2.dev
+    public-url: ${R2_PUBLIC_URL:}    # 커스텀 도메인 권장 (예: https://cdn.aiott.kr)
+    # true 로 켜면 재생이 깨진다. 이유는 R2Properties#presignPlayback 주석 참고.
+    presign-playback: ${R2_PRESIGN_PLAYBACK:false}
   ffmpeg:
     path: ${FFMPEG_PATH:ffmpeg}
   web:
@@ -83,15 +87,20 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,flyway,mappings
+        # health 만 노출한다. mappings 는 전체 라우트 목록을, flyway 는 마이그레이션
+        # 이력을 그대로 보여주므로 공개 서비스에서 켜 둘 이유가 없다.
+        include: health
   endpoint:
     health:
       show-details: never
 
 security:
   jwt:
-    # 운영환경: openssl rand -base64 48 로 생성 후 JWT_SECRET 환경변수로 주입
-    secret: ${JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32CHARS_MIN}
+    # 기본값을 두지 않는다. 이전에는 공개 문자열이 기본값이어서 JWT_SECRET 을
+    # 넣지 않고 배포하면 누구나 같은 키로 aud=admin / ROLE_ADMIN 토큰을 위조할 수
+    # 있었다. 미설정 시 기동에 실패하는 편이 안전하다.
+    #   생성: openssl rand -base64 48
+    secret: ${JWT_SECRET}
 
 server:
   port: ${PORT:8080}

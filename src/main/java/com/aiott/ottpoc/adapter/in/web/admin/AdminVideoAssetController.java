@@ -8,10 +8,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/video-assets")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminVideoAssetController {
 
     private final AdminVideoAssetUseCase useCase;
