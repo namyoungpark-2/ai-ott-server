@@ -22,7 +22,7 @@ stamp=$(date +%Y%m%d-%H%M%S)
 file="aiott-${stamp}.sql.gz"
 tmp="/tmp/${file}"
 
-echo "[$(date -Is)] 백업 시작"
+echo "[$(date -u +%FT%TZ)] 백업 시작"
 
 # 컨테이너 안에서 pg_dump 를 실행한다 — 호스트에 postgres 클라이언트가 없어도 된다.
 docker compose exec -T postgres \
@@ -45,14 +45,22 @@ fi
 rm -f "$tmp"
 
 # 오래된 일별 백업 정리 — 최근 KEEP_DAILY 개만 남긴다.
-mapfile -t old < <(
-    aws s3 ls "s3://${BUCKET}/daily/" --endpoint-url "$ENDPOINT" \
-        | awk '{print $4}' | sort | head -n "-${KEEP_DAILY}"
-)
-for key in "${old[@]:-}"; do
-    [[ -z "$key" ]] && continue
-    aws s3 rm "s3://${BUCKET}/daily/${key}" --endpoint-url "$ENDPOINT" --only-show-errors
-    echo "  회전 삭제: ${key}"
-done
+#
+# mapfile(bash 4+) 과 head -n -N(GNU 전용) 을 쓰지 않는다. 대상 VM 은 Ubuntu 라
+# 둘 다 동작하지만, 그러면 스크립트를 다른 환경에서 검증할 수 없다. 회전은
+# 실패해도 조용히 넘어가 백업이 계속 쌓이는 쪽이라 검증 가능해야 한다.
+keys=$(aws s3 ls "s3://${BUCKET}/daily/" --endpoint-url "$ENDPOINT" \
+    | awk '{print $4}' | grep -v '^$' | sort)
+total=$(printf '%s\n' "$keys" | grep -c . || true)
 
-echo "[$(date -Is)] 백업 완료"
+if [ "${total:-0}" -gt "$KEEP_DAILY" ]; then
+    printf '%s\n' "$keys" | head -n "$(( total - KEEP_DAILY ))" | while read -r key; do
+        [ -z "$key" ] && continue
+        aws s3 rm "s3://${BUCKET}/daily/${key}" --endpoint-url "$ENDPOINT" --only-show-errors
+        echo "  회전 삭제: ${key}"
+    done
+else
+    echo "  보관 ${total:-0}/${KEEP_DAILY} — 회전 없음"
+fi
+
+echo "[$(date -u +%FT%TZ)] 백업 완료"

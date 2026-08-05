@@ -3,7 +3,6 @@
 # CF 프록시를 켜면 Let's Encrypt HTTP-01 검증이 막히므로 자동 발급을 쓰지 않고
 # Cloudflare Origin CA 인증서(무료, 15년)를 직접 넣는다.
 # CF 대시보드의 SSL/TLS 모드는 반드시 "Full (strict)" 로 둔다.
-
 {
 	# 관리 API 는 쓰지 않는다.
 	admin off
@@ -35,16 +34,11 @@ api.aiott.kr {
 		}
 	}
 
+	# 디스크를 아끼기 위해 회전 설정만 둔다. 무료 VM 이라 로그가 쌓이면 곤란하다.
 	log {
 		output file /data/access.log {
 			roll_size 10MB
 			roll_keep 3
-		}
-		# 헬스체크는 로그에서 제외해 디스크를 아낀다.
-		format filter {
-			request>uri query {
-				replace *
-			}
 		}
 	}
 }

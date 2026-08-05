@@ -48,6 +48,20 @@
 by SecurityConfig` 라는 주석이 있었다. **의도는 있었고 배선만 되지 않은 상태**였다.
 로컬에서만 구동했으므로 드러날 기회가 없었다.
 
+### R2 전환 시 업로드가 실패하는 문제
+
+`StorageType` enum 은 `LOCAL, S3, R2` 인데, V2 마이그레이션이 만든 체크 제약은
+`('LOCAL','S3')` 만 허용한다. R2 가 나중에 enum 에 추가되면서 제약이 함께 갱신되지
+않았고, 지금까지 로컬 모드로만 구동해 드러나지 않았다.
+
+```
+ERROR: new row for relation "video_asset" violates check constraint
+       "ck_video_asset_storage"
+```
+
+`video_asset` 과 `image_asset` 두 테이블에 같은 문제가 있다.
+**V17__allow_r2_storage_type.sql** 로 두 제약에 `'R2'` 를 추가했다.
+
 ### R2 전환 시 재생이 깨지는 문제
 
 `STORAGE_TYPE=r2` 로 켜기 전에 확인한 결과, **그대로는 재생이 동작하지 않는다.**
@@ -228,6 +242,7 @@ POST /auth/ops/login      → aud=ops,   ROLE_SRE    → /api/ops/**
 | `adapter/in/web/{admin,ops}/*Controller.java` (13) | 수정 | 클래스 레벨 `@PreAuthorize` 추가 |
 | `config/FlywayMigrationChecker.java` | 수정 | `@Profile("!test")` — Boot 자동 마이그레이션과 중복 |
 | `resources/application.yml` | 수정 | `JWT_SECRET` 기본값 제거, actuator 는 health 만, lazy-init off |
+| `resources/db/migration/V17__allow_r2_storage_type.sql` | **신규** | 체크 제약에 `'R2'` 허용 — 없으면 R2 업로드 실패 |
 | `src/test/resources/application.properties` | **신규** | 테스트용 더미 시크릿 + H2 |
 | `infra/Dockerfile` | **신규** | ARM64 · Java 21 통일 · ffmpeg 포함 · 비루트 |
 | `infra/docker-compose.yml` | **신규** | caddy + app + postgres |
@@ -439,6 +454,37 @@ Mac 이 arm64 라 Oracle Ampere A1 과 동일 아키텍처로 검증했다.
    Class B 오퍼레이션(월 1,000만 무료)을 소모한다. 베타 규모(예: 1,000뷰 ×
    150세그먼트 = 15만)에서는 여유가 크다.
 ```
+
+#### Caddy 포함 전체 스택 + 실제 R2 로 E2E 검증
+
+자체 서명 인증서로 caddy·app·postgres 3개 컨테이너를 모두 띄우고, 실제 R2
+자격증명으로 업로드부터 재생까지 통과시켰다.
+
+```
+✅ Caddyfile 문법 검증 (caddy validate) — 최초에 log 블록 문법 오류가 있어 수정
+✅ Caddy 경유 HTTPS: /health → 200, /api/admin/contents → 401
+✅ 콘텐츠 생성 → 13MB mp4 업로드 → 트랜스코딩(약 24초) → status=READY
+✅ hls_master_key = https://cdn.aiott.kr/hls/<assetId>/master.m3u8
+✅ 마스터 플레이리스트 조회 → 200 (유효한 VOD 플레이리스트, 8세그먼트)
+✅ ★ 세그먼트 4개 실제 로드 → 전부 200 (2.4~4.3MB 실데이터)
+     presign 수정이 없었다면 이 지점에서 전부 403 이었다
+✅ backup.sh → R2 업로드 성공
+✅ 백업 회전(삭제) 경로 검증 — KEEP=1 로 강제해 3개 삭제 확인
+✅ ★ 복원 리허설: content 전체 삭제 → restore.sh → 레코드·flyway 17건 복원,
+     hls_master_key 까지 일치, 앱 재기동 후 /health 200
+✅ 검증 후 R2 두 버킷과 로컬 볼륨 모두 정리
+```
+
+발견해 고친 것:
+- **`ck_video_asset_storage` 가 `'R2'` 를 거부** → V17 마이그레이션 추가
+- **Caddyfile `log` 블록 문법 오류** → Caddy 기동 실패였을 것
+- **`backup.sh` 이식성 3건** (`date -Is`, `mapfile`, `head -n -N` 모두 GNU 전용)
+  → Ubuntu 에서는 동작하지만 그러면 스크립트를 검증할 수 없다. 회전은 실패해도
+  조용히 넘어가 백업이 쌓이는 쪽이라 검증 가능해야 한다.
+
+알아 둘 동작:
+- **업로드가 트랜스코딩을 자동으로 시작하지 않는다.** 자산 첨부 후
+  `POST /api/admin/contents/{id}/transcode` 를 따로 호출해야 한다(어드민 UI 흐름과 동일).
 
 ### 배포 후 확인해야 하는 항목
 
