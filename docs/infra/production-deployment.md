@@ -138,7 +138,7 @@ false 면 저장된 공개 URL(`cdn.aiott.kr/hls/.../master.m3u8`)을 그대로 
 | 백엔드 위치 | 개발자 노트북 + ngrok | Oracle VM (춘천), 상시 가동 |
 | 백엔드 주소 | 매번 바뀌는 ngrok URL | `api.aiott.kr` 고정 |
 | DB | 로컬 Postgres | VM 내 컨테이너 + 일일 백업 |
-| 영상 저장 | 로컬 디스크 | R2 + `cdn.aiott.kr` (CDN 캐싱) |
+| 영상 저장 | 로컬 디스크 | R2 + `cdn.aiott.kr` (egress 무료) |
 | 영상 트래픽 | 노트북 대역폭 | VM 미경유 (R2 직접) |
 | JVM 힙 / RAM | 400MB / 512MB 전제 | 2GB / 24GB |
 | 어드민 인증 | **없음** | aud=admin + ROLE_ADMIN |
@@ -431,6 +431,13 @@ Mac 이 arm64 라 Oracle Ampere A1 과 동일 아키텍처로 검증했다.
 ✅ web 빌드 산출물에 ngrok 잔재 0건 (실행 코드 기준)
 ✅ NEXT_PUBLIC_API_BASE_URL 없이 운영 빌드                 → 빌드 실패
 ✅ admin 빌드 성공
+✅ R2 버킷 2개 생성(APAC), cdn.aiott.kr 커스텀 도메인 연결 후 실제 서빙 확인
+✅ admin.aiott.kr → ai-ott-admin 워커 연결, HTTP 307 정상
+⚠️ cdn.aiott.kr 은 CDN 캐싱이 되지 않는다(cf-cache-status: DYNAMIC).
+   .txt / .ts 로 각각 실측했다. 어댑터가 Cache-Control 을 설정하지 않기 때문이다.
+   R2 egress 는 캐싱과 무관하게 무료이므로 비용 문제는 없고, 매 요청이 R2 의
+   Class B 오퍼레이션(월 1,000만 무료)을 소모한다. 베타 규모(예: 1,000뷰 ×
+   150세그먼트 = 15만)에서는 여유가 크다.
 ```
 
 ### 배포 후 확인해야 하는 항목
@@ -468,3 +475,4 @@ Mac 이 arm64 라 Oracle Ampere A1 과 동일 아키텍처로 검증했다.
 | **`middleware.ts` → `proxy.ts`** | Next.js 16 권장 명칭. 현재도 동작함 | 별건 |
 | **`COMMERCIALIZATION_PLAN.md` 가 낡음** | 구현 완료 기능이 "없음" 으로 적혀 있고 Java 26 등 오기 | 별건 |
 | **R2 용량 모니터링 없음** | 10GB 초과 시 업로드 실패를 사전에 알 수 없음 | 콘텐츠 유입 후 |
+| **CDN 캐싱 미작동** | 어댑터가 `Cache-Control` 을 설정하지 않아 매 요청이 R2 에 도달한다. `PutObjectRequest` 3곳에 `.cacheControl(...)` 만 추가하면 된다. 단 재트랜스코딩이 같은 키를 재사용하므로 TTL 을 길게 잡으면 옛 세그먼트가 남을 수 있다 — TTL 선택이 필요해 이번 범위에서 제외 | 트래픽 증가 시 |
