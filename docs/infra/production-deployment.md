@@ -119,7 +119,7 @@ by SecurityConfig` 라는 주석이 있었다. **의도는 있었고 배선만 �
 | 어드민 인증 | **없음** | aud=admin + ROLE_ADMIN |
 | JWT 시크릿 | 공개 기본값 | 필수 주입, 미설정 시 기동 실패 |
 | 배포 방식 | 수동 (대시보드) | GitHub Actions |
-| CI 배포 대상 | Vercel (미사용) | Cloudflare Workers (실제) |
+| CI 배포 대상 | Vercel 워크플로 (미사용) | 제거 — 실제 경로인 CF Workers Builds 로 일원화 |
 | 도메인 연결 근거 | 대시보드에만 존재 | `wrangler.jsonc` 에 명시 |
 | 월 비용 | $0 (단 노트북 상시 가동) | **$0** |
 
@@ -223,7 +223,6 @@ POST /auth/ops/login      → aud=ops,   ROLE_SRE    → /api/ops/**
 | `app/constants.ts` | 수정 | `ngrok-skip-browser-warning` 헤더 제거 |
 | `.env.production` | 수정 | `https://api.aiott.kr` |
 | `wrangler.jsonc` | 수정 | `aiott.kr`, `www.aiott.kr` 커스텀 도메인 명시 |
-| `.github/workflows/deploy.yml` | **신규** | `wrangler deploy` + 스모크 체크 |
 | `.github/workflows/deploy-{development,staging,production}.yml` | **삭제** | Vercel 배포 (실제 미사용) |
 | `.github/workflows/ci.yml` | 수정 | Node 22, lint 비차단 |
 
@@ -238,7 +237,7 @@ POST /auth/ops/login      → aud=ops,   ROLE_SRE    → /api/ops/**
 | `wrangler.jsonc`, `open-next.config.ts` | **신규** | 배포 설정이 저장소에 없었다 |
 | `package.json` | 수정 | `@opennextjs/cloudflare` + deploy 스크립트 |
 | `pnpm-workspace.yaml` | 수정 | `onlyBuiltDependencies: esbuild, workerd` |
-| `.github/workflows/deploy.yml` | **신규** | `pnpm run deploy` |
+| `.github/workflows/deploy.yml` | **신규** | `pnpm run deploy` — **수동 실행만** (아래 주의 참고) |
 
 ### ai-ott-app (변경 없음)
 
@@ -327,7 +326,8 @@ flutter build apk --dart-define=API_BASE_URL=https://api.aiott.kr
 6. CF DNS: api A 레코드 → VM IP (프록시 ON)
 7. CF SSL/TLS 모드 → Full (strict)             ← 이걸 빠뜨리면 502
 8. R2 버킷 + cdn.aiott.kr 연결 → .env 의 R2_* 채우고 compose 재기동
-9. 프론트 배포 (GH Actions 또는 npm run deploy)
+9. 프론트 배포 — **web 은 자동**(CF Workers Builds 가 main push 를 감지),
+   admin 은 상황 확인 후 (아래 주의)
 10. CF Workers 에 admin.aiott.kr 커스텀 도메인 연결
 11. 검증 체크리스트 (§8) 수행
 ```
@@ -341,6 +341,21 @@ flutter build apk --dart-define=API_BASE_URL=https://api.aiott.kr
   `netfilter-persistent` 로 영구화한다.
 - **유휴 회수** — 7일간 사용률이 낮으면 회수될 수 있다. 헬스체크 크론이 완화하지만
   보장은 아니다. 그래서 구성을 전부 코드로 남겼다.
+
+### ⚠️ 프론트 배포 경로가 둘이 되지 않게
+
+PR 검증 중 **`ai-ott-web` 저장소에 Cloudflare Workers Builds(대시보드 git 연동)가
+붙어 있다는 사실이 확인됐다** — PR 에 `Workers Builds: ai-ott-web` 체크가 붙고 통과했다.
+즉 그동안의 배포는 수동이 아니라 이 연동이 수행하고 있었다.
+
+따라서 GitHub Actions 로 `wrangler deploy` 를 또 돌리면 같은 워커에 이중 배포가 된다.
+- **web**: GH Actions 배포 워크플로를 두지 않는다. `ci.yml`(lint+build 검증)만 남긴다.
+- **admin**: PR 에 CF 체크가 나타나지 않아 연동 여부가 불확실하다. 그래서
+  `deploy.yml` 의 `push` 트리거를 주석 처리하고 **수동 실행만** 가능하게 뒀다.
+  대시보드에서 Workers Builds 연동이 없음을 확인한 뒤 주석을 해제할 것.
+
+`wrangler.jsonc` 에 추가한 커스텀 도메인 설정은 Workers Builds 가 빌드할 때도
+그대로 적용된다.
 
 ### 오리진 보호
 
