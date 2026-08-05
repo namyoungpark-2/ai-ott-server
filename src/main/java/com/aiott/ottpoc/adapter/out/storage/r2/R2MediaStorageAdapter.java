@@ -33,6 +33,7 @@ public class R2MediaStorageAdapter implements MediaStoragePort {
     private final S3Presigner presigner;
     private final String bucket;
     private final String publicUrl;
+    private final boolean presignPlayback;
     private final Path tempDir;
 
     public R2MediaStorageAdapter(S3Client s3, S3Presigner presigner, R2Properties props, String tempDir) {
@@ -40,6 +41,7 @@ public class R2MediaStorageAdapter implements MediaStoragePort {
         this.presigner = presigner;
         this.bucket = props.getBucket();
         this.publicUrl = props.getPublicUrl().replaceAll("/$", "");
+        this.presignPlayback = props.isPresignPlayback();
         this.tempDir = Paths.get(tempDir).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.tempDir);
@@ -165,6 +167,16 @@ public class R2MediaStorageAdapter implements MediaStoragePort {
     @Override
     public String getPlaybackUrl(String hlsMasterKey) {
         if (hlsMasterKey == null) return null;
+
+        // 기본 경로: 공개 커스텀 도메인 URL(cdn.aiott.kr/...)을 그대로 내려준다.
+        //
+        // presigned URL 로 바꾸면 재생이 깨진다. presigned URL 은 S3 엔드포인트를
+        // 가리키는데 master.m3u8 안의 세그먼트는 상대 경로(seg_000.ts)여서,
+        // 플레이어가 서명 없이 S3 엔드포인트에 세그먼트를 요청하고 403 을 받는다.
+        // 자세한 내용은 R2Properties#presignPlayback 참고.
+        if (!presignPlayback) {
+            return hlsMasterKey;
+        }
 
         // 공개 URL에서 S3 키 추출
         String key;

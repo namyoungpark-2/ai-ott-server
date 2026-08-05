@@ -48,6 +48,31 @@
 by SecurityConfig` 라는 주석이 있었다. **의도는 있었고 배선만 되지 않은 상태**였다.
 로컬에서만 구동했으므로 드러날 기회가 없었다.
 
+### R2 전환 시 재생이 깨지는 문제
+
+`STORAGE_TYPE=r2` 로 켜기 전에 확인한 결과, **그대로는 재생이 동작하지 않는다.**
+
+```
+1. ffmpeg 가 만든 master.m3u8 의 세그먼트 경로는 상대 경로다 → seg_000.ts
+2. R2MediaStorageAdapter#getPlaybackUrl 은 마스터를 presigned URL 로 바꾼다
+   → https://<account>.r2.cloudflarestorage.com/<bucket>/hls/<id>/master.m3u8?X-Amz-...
+3. 플레이어는 seg_000.ts 를 그 S3 엔드포인트 기준으로 요청한다 (서명 없음)
+4. R2 의 S3 API 는 항상 SigV4 를 요구한다 → 모든 세그먼트 403 → 재생 불가
+```
+
+마스터 하나만 서명해도 세그먼트는 보호되지 않는다는 점은 코드 주석에도 적혀 있었지만,
+그것이 **기능 자체를 깨뜨린다**는 점은 반영돼 있지 않았다. 로컬 스토리지 모드에서만
+동작을 확인해 왔기 때문이다.
+
+조치: `app.r2.presign-playback` 플래그를 추가하고 **기본값을 false** 로 둔다.
+false 면 저장된 공개 URL(`cdn.aiott.kr/hls/.../master.m3u8`)을 그대로 내려주므로
+세그먼트도 같은 공개 도메인에서 정상 로드된다. presign 코드는 남겨 두었고,
+세그먼트까지 함께 보호하는 방식(플레이리스트 재작성 또는 Cloudflare Signed Token)을
+구현할 때 다시 켜면 된다.
+
+대가는 **`cdn.aiott.kr` URL 을 아는 사람은 로그인 없이 시청 가능**하다는 것이다.
+지인 베타에서는 감수하고, 유료화 시점에 해결한다.
+
 ### 왜 Oracle Always Free 인가
 
 비용 0 이 제약이었고, 영상 트랜스코딩이 관건이었다.
@@ -265,6 +290,8 @@ flutter build apk --dart-define=API_BASE_URL=https://api.aiott.kr
 | `aud=admin` 토큰으로 공개 GET 호출 | 401. 체인별 aud 가 다르므로 의도된 동작 |
 | 트랜스코딩 중 컨테이너 재시작 | 진행 중 job 은 미완 상태로 남는다. **재시도는 어드민에서 수동** (`/admin/failures`) |
 | R2 10GB 초과 | 업로드 실패. 용량 모니터링은 이번 범위 밖 |
+| `R2_PRESIGN_PLAYBACK=true` 로 켬 | **재생 불가** — 세그먼트가 403. 반드시 false 유지 |
+| `cdn.aiott.kr/source/...` 직접 접근 | 원본 mp4 가 같은 공개 버킷에 있다. 키에 UUID+타임스탬프+파일명이 들어가 추측은 어렵지만 노출 경로다 |
 | Postgres 볼륨 손상 | `restore.sh` 로 최대 24시간 전 상태까지 복구 |
 | Oracle 유휴 회수 | 재생성 후 30분 복구 절차 (§3) |
 | `.env` 분실 | **복구 불가.** 유일한 수동 의존 — 별도 보관 필수 |
@@ -299,6 +326,9 @@ flutter build apk --dart-define=API_BASE_URL=https://api.aiott.kr
 
 9. **영상 URL 도메인이 바뀐다** (`STORAGE_TYPE=r2`). 기존에 로컬 경로로 저장된
    레코드는 `cdn.aiott.kr` 로 자동 전환되지 않는다. 신규 콘텐츠부터 적용된다.
+
+10. **`getPlaybackUrl` 이 더 이상 presigned URL 을 만들지 않는다**(기본값).
+    이전 동작을 원하면 `R2_PRESIGN_PLAYBACK=true` 로 켤 수 있으나 재생이 깨진다.
 
 ---
 
@@ -430,7 +460,8 @@ Mac 이 arm64 라 Oracle Ampere A1 과 동일 아키텍처로 검증했다.
 | 항목 | 이유 | 우선도 |
 |---|---|---|
 | **ABR (다중 화질) 없음** | 단일 화질. 트랜스코딩 시간 3~4배 + R2 10GB 조기 소진 | 유료화 시점 |
-| **서명 URL 없음** | `cdn.aiott.kr` 주소를 알면 로그인 없이 시청 가능 | 유료화 시점 |
+| **서명 URL 없음** | presign 코드는 있으나 세그먼트를 보호하지 못해 껐다(기본 false). `cdn.aiott.kr` 주소를 알면 로그인 없이 시청 가능 | 유료화 시점 |
+| **원본 mp4 가 공개 버킷에 있음** | `source/` 접두어로 같은 버킷에 저장된다. 비공개 버킷 분리가 정석 | 유료화 시점 |
 | **트랜스코딩이 API 와 같은 프로세스** | 24GB 라 당장 문제없음. `TranscodingPort` 가 있어 분리는 국소적 | 트래픽 증가 시 |
 | **단일 VM = 단일 장애점** | 무료 범위의 한계. 30분 복구 절차로 완화 | — |
 | **lint 에러 (web 9 / admin 47)** | main 시점부터 존재. CI 를 막지 않도록 비차단 처리 | 별건 |

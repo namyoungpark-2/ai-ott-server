@@ -56,7 +56,9 @@ app:
     access-key-id: ${R2_ACCESS_KEY_ID:}
     secret-access-key: ${R2_SECRET_ACCESS_KEY:}
     bucket: ${R2_BUCKET:}
-    public-url: ${R2_PUBLIC_URL:}    # e.g. https://pub-xxxxxxxx.r2.dev
+    public-url: ${R2_PUBLIC_URL:}    # 커스텀 도메인 권장 (예: https://cdn.aiott.kr)
+    # true 로 켜면 재생이 깨진다. 이유는 R2Properties#presignPlayback 주석 참고.
+    presign-playback: ${R2_PRESIGN_PLAYBACK:false}
   ffmpeg:
     path: ${FFMPEG_PATH:ffmpeg}
   web:
